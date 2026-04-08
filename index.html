@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini C Compiler</title>
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">C</div>
+      <span class="logo-text">Mini C Compiler</span>
+      <span class="logo-sub">&nbsp;— 6 Phases Visualised</span>
+    </div>
+    <div class="header-right">
+      <select id="sample-select" onchange="loadSample(this.value)">
+        <option value="basic">Simple arithmetic</option>
+        <option value="if">If / else</option>
+        <option value="loop">While loop</option>
+        <option value="forloop">For loop</option>
+        <option value="dowhile">Do-while loop</option>
+        <option value="switchc">Switch / case</option>
+        <option value="array">Arrays</option>
+        <option value="breakc">Break &amp; continue</option>
+        <option value="func">Function call</option>
+        <option value="nested">Nested expressions</option>
+      </select>
+      <button class="btn btn-run" onclick="compile()">&#9654; Compile &amp; Run</button>
+      <button class="btn" onclick="clearAll()">Clear</button>
+    </div>
+  </header>
+
+  <div class="pipeline">
+    <div class="pip-step" id="pip-1">1. Lexer</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-2">2. Parser</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-3">3. Semantic</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-4">4. IR Gen</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-5">5. Code Gen</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-6">6. Execute</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-7">7. TAC Optimizer</div>
+  </div>
+
+  <div class="main">
+
+    <!-- Left column -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="dot" style="background:var(--amber-bd)"></div>
+          <span style="flex:1">Source Code Editor</span>
+          <span class="sub">Write your C code below</span>
+        </div>
+        <textarea id="src-editor" spellcheck="false" rows="14">int main() {
+    int x = 5 + 3;
+    int y = x * 2;
+    return y;
+}</textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="dot" style="background:var(--purple-bd)"></div>
+          <span>Token colour legend</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--purple-bg);border-color:var(--purple-bd)"></div>Keyword
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--green-bg);border-color:var(--green-bd)"></div>Identifier
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--amber-bg);border-color:var(--amber-bd)"></div>Number
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--coral-bg);border-color:var(--coral-bd)"></div>Operator
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--gray-bg);border-color:var(--gray-bd)"></div>Punctuation
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--blue-bg);border-color:var(--blue-bd)"></div>String
+          </div>
+          <div class="leg-item">
+            <div class="leg-dot" style="background:var(--red-bg);border-color:var(--red-bd)"></div>Unknown
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: phase cards -->
+    <div class="phases-col">
+
+      <div class="phase-card" id="ph-1">
+        <div class="phase-hdr" onclick="toggle('ph-1')">
+          <div class="ph-num">1</div>
+          <span class="ph-name">Lexical Analysis</span>
+          <span class="ph-desc">Source &rarr; Token stream</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-1"><span style="color:var(--text3)">Click Compile &amp; Run to start</span></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-2">
+        <div class="phase-hdr" onclick="toggle('ph-2')">
+          <div class="ph-num">2</div>
+          <span class="ph-name">Syntax Analysis (Parser)</span>
+          <span class="ph-desc">Tokens &rarr; Abstract Syntax Tree</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-2"></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-3">
+        <div class="phase-hdr" onclick="toggle('ph-3')">
+          <div class="ph-num">3</div>
+          <span class="ph-name">Semantic Analysis</span>
+          <span class="ph-desc">Type checking &middot; Symbol table</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-3"></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-4">
+        <div class="phase-hdr" onclick="toggle('ph-4')">
+          <div class="ph-num">4</div>
+          <span class="ph-name">Intermediate Representation</span>
+          <span class="ph-desc">Three-address code (TAC)</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-4"></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-5">
+        <div class="phase-hdr" onclick="toggle('ph-5')">
+          <div class="ph-num">5</div>
+          <span class="ph-name">Code Generation</span>
+          <span class="ph-desc">x86-like assembly output</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-5"></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-6">
+        <div class="phase-hdr" onclick="toggle('ph-6')">
+          <div class="ph-num">6</div>
+          <span class="ph-name">Execution (Simulated)</span>
+          <span class="ph-desc">Tree-walking interpreter &middot; return value</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-6"></div>
+        </div>
+      </div>
+
+      <div class="phase-card" id="ph-7">
+        <div class="phase-hdr" onclick="toggle('ph-7')">
+          <div class="ph-num">7</div>
+          <span class="ph-name">TAC Optimizer</span>
+          <span class="ph-desc">Real optimization passes &middot; optimized IR &amp; assembly</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-7"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>SmartC Compiler</footer>
+
+  <!-- Phase 0: Shared utilities & sample programs -->
+  <script src="phase0_utils.js?v=3"></script>
+  <!-- Phase 1: Lexer — source text → token stream -->
+  <script src="phase1_lexer.js?v=3"></script>
+  <!-- Phase 2: Parser — tokens → Abstract Syntax Tree (AST) -->
+  <script src="phase2_parser.js?v=3"></script>
+  <!-- Phase 3: Semantic Analysis — type checking & symbol table -->
+  <script src="phase3_semantic.js?v=3"></script>
+  <!-- Phase 4: IR Generation — AST → Three-Address Code (TAC) -->
+  <script src="phase4_ir.js?v=3"></script>
+  <!-- Phase 5: Code Generation — TAC → pseudo x86 assembly -->
+  <script src="phase5_codegen.js?v=3"></script>
+  <!-- Phase 6: Execution — tree-walking interpreter -->
+  <script src="phase6_execute.js?v=3"></script>
+  <!-- Phase 7: TAC Optimizer — real optimization passes on IR -->
+  <script src="phase7_optimizer.js?v=5"></script>
+  <!-- ML Optimizer: Feature extraction from TAC -->
+  <script src="ml_optimizer/js/feature_extractor.js?v=1"></script>
+  <!-- ML Optimizer: Logistic Regression model from scratch -->
+  <script src="ml_optimizer/js/model.js?v=1"></script>
+  <!-- ML Optimizer: ML-guided optimization selection -->
+  <script src="ml_optimizer/js/ml_optimizer.js?v=1"></script>
+  <!-- ML Optimizer: TAC to C code generation -->
+  <script src="ml_optimizer/js/tac_to_c.js?v=1"></script>
+  <!-- ML Optimizer: Integration layer and high-level API -->
+  <script src="ml_optimizer/js/integration.js?v=1"></script>
+  <!-- Compiler Driver — orchestrates all 7 phases -->
+  <script src="compiler_driver.js?v=5"></script>
+
+</body>
+
+</html>
