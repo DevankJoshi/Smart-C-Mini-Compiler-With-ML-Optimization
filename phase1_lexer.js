@@ -84,9 +84,15 @@ function lex(src) {
       i=j; continue;
     }
 
+    // Three-char operators (must check first)
+    const three = src.slice(i, i+3);
+    if (['<<=', '>>=', '&=|', '|=^', '^='].includes(three)) {
+      tokens.push({type:'OPERATOR', val:three, pos:i}); i+=3; continue;
+    }
+
     // Two-char operators (must check before single-char)
     const two = src.slice(i, i+2);
-    if (['==','!=','<=','>=','&&','||','++','--','+=','-=','*=','/='].includes(two)) {
+    if (['==','!=','<=','>=','&&','||','++','--','+=','-=','*=','/=','<<','>>','&=','|=','^='].includes(two)) {
       tokens.push({type:'OPERATOR', val:two, pos:i}); i+=2; continue;
     }
 

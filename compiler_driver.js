@@ -11,6 +11,7 @@ function compile() {
   let tokens;
   try {
     tokens=lex(src);
+    window.lastLexerOutput = tokens;  // Store for export
     document.getElementById('out-1').innerHTML=renderTokens(tokens);
     activatePhase(1,false);
   } catch(e) {
@@ -22,6 +23,7 @@ function compile() {
   let ast;
   try {
     ast=parse(tokens);
+    window.lastParserOutput = ast;  // Store for export
     document.getElementById('out-2').innerHTML=astToSvg(ast);
     activatePhase(2,false);
   } catch(e) {
@@ -32,6 +34,7 @@ function compile() {
   // Phase 3 — Semantic
   try {
     const sem=semanticAnalysis(ast);
+    window.lastSemanticOutput = sem;  // Store for export
     document.getElementById('out-3').innerHTML=renderSemantic(sem);
     activatePhase(3, sem.errors.length>0);
   } catch(e) {
@@ -43,6 +46,7 @@ function compile() {
   let ir;
   try {
     ir=generateIR(ast);
+    window.lastIROutput = ir;  // Store for export
     document.getElementById('out-4').innerHTML=renderIR(ir);
     activatePhase(4,false);
   } catch(e) {
@@ -54,6 +58,7 @@ function compile() {
   let asm;
   try {
     asm = generateAsm(ir);
+    window.lastCodegenOutput = asm;  // Store for export
     document.getElementById('out-5').innerHTML = renderAsm(asm);
     activatePhase(5, false);
   } catch(e) {
@@ -64,6 +69,7 @@ function compile() {
   // Phase 6 — Execute (original)
   try {
     const result = execute(ast);
+    window.lastExecOutput = result;  // Store for export
     document.getElementById('out-6').innerHTML = renderExec(result);
     activatePhase(6, false);
   } catch(e) {

@@ -31,6 +31,10 @@
         <option value="nested">Nested expressions</option>
       </select>
       <button class="btn btn-run" onclick="compile()">&#9654; Compile &amp; Run</button>
+      <button class="btn" onclick="exportCode('c')">Export C</button>
+      <button class="btn" onclick="exportCode('json')">Export JSON</button>
+      <button class="btn" onclick="exportCode('csv')">Export CSV</button>
+      <button class="btn" onclick="toggleDarkMode()">🌙 Dark</button>
       <button class="btn" onclick="clearAll()">Clear</button>
     </div>
   </header>
@@ -212,6 +216,78 @@
   <script src="ml_optimizer/js/integration.js?v=1"></script>
   <!-- Compiler Driver — orchestrates all 7 phases -->
   <script src="compiler_driver.js?v=5"></script>
+
+  <script>
+    // Dark mode toggle
+    function toggleDarkMode() {
+      const html = document.documentElement;
+      const isDark = html.style.colorScheme === 'dark';
+      if (isDark) {
+        html.style.colorScheme = 'light';
+        localStorage.setItem('colorScheme', 'light');
+      } else {
+        html.style.colorScheme = 'dark';
+        localStorage.setItem('colorScheme', 'dark');
+      }
+    }
+
+    // Initialize dark mode from localStorage or system preference
+    function initDarkMode() {
+      const saved = localStorage.getItem('colorScheme');
+      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
+        document.documentElement.style.colorScheme = 'dark';
+      } else {
+        document.documentElement.style.colorScheme = 'light';
+      }
+    }
+
+    // Export functions
+    function exportCode(format) {
+      const source = document.getElementById('src-editor').value;
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      if (format === 'c') {
+        const blob = new Blob([source], {type: 'text/plain'});
+        downloadFile(blob, `code_${timestamp}.c`);
+      } else if (format === 'json') {
+        const data = {
+          source: source,
+          timestamp: timestamp,
+          phases: {
+            lexer: window.lastLexerOutput || null,
+            parser: window.lastParserOutput || null,
+            semantic: window.lastSemanticOutput || null,
+            ir: window.lastIROutput || null,
+            execution: window.lastExecOutput || null
+          }
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        downloadFile(blob, `compilation_${timestamp}.json`);
+      } else if (format === 'csv') {
+        const tokens = window.lastLexerOutput || [];
+        let csv = 'Value,Type,Line,Column\n';
+        tokens.forEach(t => {
+          csv += `"${t.val}","${t.type}",${t.line || '?'},${t.col || '?'}\n`;
+        });
+        const blob = new Blob([csv], {type: 'text/csv'});
+        downloadFile(blob, `tokens_${timestamp}.csv`);
+      }
+    }
+
+    function downloadFile(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initDarkMode);
+  </script>
 
 </body>
 

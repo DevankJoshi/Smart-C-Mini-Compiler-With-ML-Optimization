@@ -29,12 +29,27 @@ function parse(tokens) {
   const parseType = () => isType() ? eat().val : null;
 
   /* ── Expression precedence (low → high) ───────────────
-     Or → And → Cmp → Add/Sub → Mul/Div → Unary → Call/Index/Postfix → Primary
+     Ternary → Or → And → Cmp → Add/Sub → Mul/Div → Unary → Call/Index/Postfix → Primary
   ──────────────────────────────────────────────────────── */
-  const parseExpr   = () => parseOr();
+  const parseExpr   = () => parseTernary();
+  const parseTernary = () => {
+    let cond = parseOr();
+    if (cur() && cur().val === '?') {
+      eat(); // ?
+      const trueExpr = parseExpr();
+      expect(':');
+      const falseExpr = parseTernary();
+      return {type:'TernaryExpr', condition:cond, trueExpr, falseExpr};
+    }
+    return cond;
+  };
   const parseOr     = () => leftAssoc(parseAnd,    ['||']);
   const parseAnd    = () => leftAssoc(parseCmp,    ['&&']);
-  const parseCmp    = () => leftAssoc(parseAddSub, ['<','>','<=','>=','==','!=']);
+  const parseCmp    = () => leftAssoc(parseBitOr,  ['<','>','<=','>=','==','!=']);
+  const parseBitOr  = () => leftAssoc(parseBitXor, ['|']);
+  const parseBitXor = () => leftAssoc(parseBitAnd, ['^']);
+  const parseBitAnd = () => leftAssoc(parseShift,  ['&']);
+  const parseShift  = () => leftAssoc(parseAddSub, ['<<','>>']);
   const parseAddSub = () => leftAssoc(parseMulDiv, ['+','-']);
   const parseMulDiv = () => leftAssoc(parseUnary,  ['*','/','%']);
 

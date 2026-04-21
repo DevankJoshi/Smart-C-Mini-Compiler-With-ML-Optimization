@@ -167,7 +167,15 @@ function renderAsm(instr) {
       return `<span class="asm-lbl">${esc(i.s)}</span>`;
     const parts = i.s.split(' '), op = parts[0], rest = parts.slice(1).join(' ');
     const cmt = i.comment ? `  <span class="asm-cmt">${esc(i.comment)}</span>` : '';
-    return `    <span class="asm-op">${esc(op)}</span> ${esc(rest)}${cmt}`;
+    
+    // Syntax highlight operands: registers (%eax, etc), addresses ([...]), numbers
+    let highlightedRest = esc(rest)
+      .replace(/(%[a-z0-9]+)/g, '<span style="color:var(--amber)">$1</span>')  // registers
+      .replace(/(\$\d+)/g, '<span style="color:var(--purple)">$1</span>')      // immediates
+      .replace(/(\[.*?\])/g, '<span style="color:var(--green)">$1</span>')     // memory addresses
+      .replace(/(,)/g, '<span style="color:var(--text3)">$1</span>');          // commas
+    
+    return `    <span class="asm-op">${esc(op)}</span> ${highlightedRest}${cmt}`;
   }).join('\n');
   return `<div class="asm-block">${html}</div>`;
 }

@@ -333,32 +333,49 @@ function optimizeTAC(ir) {
     totalHits: 0,
     rounds: 0,
     original_count: ir.filter(c => c.op !== 'label' && c.op !== 'func').length,
-    optimized_count: 0
+    optimized_count: 0,
+    passMetrics: {} // Track effectiveness of each pass
   };
 
   const MAX_ROUNDS = 10;
+  
+  // Define passes with priority (high-impact passes first)
+  const passes = [
+    { name: 'Dead Code Elimination', fn: passDeadCode, priority: 1 },
+    { name: 'Unreachable Code Elim', fn: passUnreachable, priority: 2 },
+    { name: 'Constant Folding',      fn: passConstantFolding, priority: 3 },
+    { name: 'Branch Folding',        fn: passBranchFolding, priority: 4 },
+    { name: 'Constant Propagation',  fn: passConstantPropagation, priority: 5 },
+    { name: 'Copy Propagation',      fn: passCopyPropagation, priority: 6 },
+    { name: 'Local Constant Prop',   fn: passLocalConstantPropagation, priority: 7 },
+    { name: 'CSE',                   fn: passCSE, priority: 8 },
+  ];
+
   for (let round = 0; round < MAX_ROUNDS; round++) {
     let anyChange = false;
 
-    const runs = [
-      { name: 'Constant Folding',      fn: passConstantFolding },
-      { name: 'Constant Propagation',  fn: passConstantPropagation },
-      { name: 'Local Constant Prop',   fn: passLocalConstantPropagation },
-      { name: 'Copy Propagation',      fn: passCopyPropagation },
-      { name: 'CSE',                   fn: passCSE },
-      { name: 'Branch Folding',        fn: passBranchFolding },
-      { name: 'Unreachable Code Elim', fn: passUnreachable },
-      { name: 'Dead Code Elimination', fn: passDeadCode },
-    ];
+    // Sort passes by priority and effectiveness from previous rounds
+    const sorted = passes.slice().sort((a, b) => {
+      const effA = report.passMetrics[a.name] || 0;
+      const effB = report.passMetrics[b.name] || 0;
+      if (effB !== effA) return effB - effA; // Higher effectiveness first
+      return a.priority - b.priority;
+    });
 
-    runs.forEach(({ name, fn }) => {
+    for (const { name, fn } of sorted) {
+      const before = opt.filter(c => c.op !== 'label' && c.op !== 'func').length;
       const { changed, hits } = fn(opt);
+      const after = opt.filter(c => c.op !== 'label' && c.op !== 'func').length;
+      const impact = before - after;
+
       if (changed) {
         anyChange = true;
+        // Track effectiveness for future round prioritization
+        report.passMetrics[name] = (report.passMetrics[name] || 0) + impact;
         hits.forEach(h => report.passes.push({ round: round + 1, pass: name, detail: h }));
         report.totalHits += hits.length;
       }
-    });
+    }
 
     report.rounds++;
     if (!anyChange) break;
