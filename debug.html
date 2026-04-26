@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Compiler Debug Tool</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e8e8e8; }
+    h1 { color: #4ade80; }
+    .box { background: #2a2a2a; border: 1px solid #444; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .ok { color: #4ade80; }
+    .err { color: #f87171; }
+    .warn { color: #facc15; }
+    pre { background: #1a1a1a; border: 1px solid #333; padding: 10px; overflow-x: auto; }
+    button { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+    button:hover { background: #2563eb; }
+    #output { white-space: pre-wrap; word-wrap: break-word; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Compiler Debug Tool</h1>
+  
+  <div class="box">
+    <h2>Script Loading Status</h2>
+    <div id="script-status"></div>
+  </div>
+
+  <div class="box">
+    <h2>Function Availability</h2>
+    <div id="function-status"></div>
+  </div>
+
+  <div class="box">
+    <h2>Test Compilation</h2>
+    <button onclick="testCompile()">Test Simple Code</button>
+    <pre id="output"></pre>
+  </div>
+
+  <script>
+    const log = (msg) => {
+      console.log(msg);
+      document.getElementById('output').textContent += msg + '\n';
+    };
+
+    const phases = [
+      'phase0_utils.js',
+      'phase1_lexer.js',
+      'phase2_parser.js',
+      'phase3_semantic.js',
+      'phase4_ir.js',
+      'phase5_codegen.js',
+      'phase6_execute.js',
+      'phase7_optimizer.js',
+      'ml_optimizer/js/feature_extractor.js',
+      'ml_optimizer/js/model.js',
+      'ml_optimizer/js/ml_optimizer.js',
+      'ml_optimizer/js/tac_to_c.js',
+      'ml_optimizer/js/integration.js'
+    ];
+
+    const requiredFunctions = [
+      'lex', 'parse', 'semanticAnalysis', 'generateIR',
+      'generateAsm', 'execute', 'optimizeTAC'
+    ];
+
+    // Load all scripts
+    function loadPhases() {
+      phases.forEach(phase => {
+        const script = document.createElement('script');
+        script.src = phase;
+        script.onload = () => {
+          document.getElementById('script-status').innerHTML += 
+            `<div class="ok">✓ ${phase}</div>`;
+        };
+        script.onerror = () => {
+          document.getElementById('script-status').innerHTML += 
+            `<div class="err">✗ ${phase} (failed to load)</div>`;
+        };
+        document.head.appendChild(script);
+      });
+
+      // Check functions after a delay
+      setTimeout(checkFunctions, 2000);
+    }
+
+    function checkFunctions() {
+      let html = '';
+      let allLoaded = true;
+
+      requiredFunctions.forEach(fn => {
+        const exists = typeof window[fn] === 'function';
+        if (exists) {
+          html += `<div class="ok">✓ ${fn}() available</div>`;
+        } else {
+          html += `<div class="err">✗ ${fn}() NOT FOUND</div>`;
+          allLoaded = false;
+        }
+      });
+
+      if (allLoaded) {
+        html += `<div class="ok"><strong>✓ All functions loaded successfully!</strong></div>`;
+      } else {
+        html += `<div class="err"><strong>⚠️ Some functions are missing</strong></div>`;
+      }
+
+      document.getElementById('function-status').innerHTML = html;
+    }
+
+    function testCompile() {
+      document.getElementById('output').textContent = '';
+      
+      if (typeof lex !== 'function') {
+        log('❌ Error: lex function not available');
+        return;
+      }
+
+      const src = `int main() {
+    int a = 10;
+    if (a > 5) {
+        a = a - 1;
+    } else {
+        a = a + 1;
+    }
+    return a;
+}`;
+
+      try {
+        log('Testing with code:\n' + src + '\n');
+        log('--- Starting Compilation ---\n');
+
+        log('Phase 1: Lexing...');
+        const tokens = lex(src);
+        log(`✓ Lexer OK: ${tokens.length} tokens\n`);
+
+        log('Phase 2: Parsing...');
+        const ast = parse(tokens);
+        log(`✓ Parser OK\n`);
+
+        log('Phase 3: Semantic Analysis...');
+        const sem = semanticAnalysis(ast);
+        log(`✓ Semantic OK\n`);
+
+        log('Phase 4: IR Generation...');
+        const ir = generateIR(ast);
+        log(`✓ IR OK: ${ir.filter(c => c.op !== 'label').length} instructions\n`);
+
+        log('Phase 5: Code Generation...');
+        const asm = generateAsm(ir);
+        log(`✓ Codegen OK: ${asm.length} assembly lines\n`);
+
+        log('Phase 6: Execution...');
+        const result = execute(ast);
+        log(`✓ Execute OK: returned ${result.ret}\n`);
+
+        log('Phase 7: Optimization...');
+        const optimized = optimizeTAC(ir);
+        log(`✓ Optimizer OK: ${optimized.optimizedIR.filter(c => c.op !== 'label').length} optimized instructions\n`);
+
+        log('✅ COMPILATION SUCCESSFUL!\n');
+        log(`Final result: return value = ${result.ret} (expected 9)`);
+
+      } catch(e) {
+        log(`❌ Compilation failed: ${e.message}`);
+        log(`\nStack trace:\n${e.stack}`);
+      }
+    }
+
+    // Start loading on page load
+    window.addEventListener('load', loadPhases);
+  </script>
+</body>
+</html>

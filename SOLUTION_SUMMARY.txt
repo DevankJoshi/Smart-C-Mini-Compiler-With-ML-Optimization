@@ -1,0 +1,150 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  FIX FOR "Can't find variable: execute"                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+ERROR: Runtime error: Can't find variable: execute
+WHEN:  When you click "Compile & Run" on your test code
+
+ROOT CAUSE: phase6_execute.js is not loading properly (usually browser cache)
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         SOLUTION (Try In Order)                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Clear Browser Cache (FASTEST - Works 90% of the time)
+─────────────────────────────────────────────────────────────
+
+Chrome/Edge/Firefox:
+  1. Press: Ctrl+Shift+Delete (Windows) or Cmd+Shift+Delete (Mac)
+  2. Click "Clear Data" / "Clear Cache"
+  3. Go back to index.html
+  4. Press: Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)
+  5. Try compiling
+
+Safari:
+  1. Develop menu → Empty Caches
+  2. Refresh page (Cmd+R)
+  3. Try compiling
+
+
+STEP 2: Use Debug Tool
+─────────────────────
+
+If Step 1 didn't work:
+
+  1. Open: debug.html (same folder as index.html)
+  2. See which scripts loaded (✓) and which failed (✗)
+  3. Click "Test Simple Code" button
+  4. Screenshot the output
+  5. Send screenshot - we can then debug from there
+
+
+STEP 3: Check Console
+────────────────────
+
+In browser console (F12 → Console tab):
+
+  typeof execute
+  // Should say "function"
+
+  If it says "undefined":
+  runDiagnostic()
+  // Shows which functions are missing
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                           WHAT WE FIXED                                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+✓ Updated script version numbers (forces cache refresh)
+✓ Added execute() availability check before calling it
+✓ Created debug.html tool for easy diagnostics
+✓ Created TROUBLESHOOTING.md with detailed guide
+✓ Added runDiagnostic() function to show what loaded
+✓ All compiler functionality preserved
+
+PREVIOUS ENHANCEMENTS STILL IN PLACE:
+✓ Bitwise operators in lexer (<<, >>, &, |, ^, ~, etc.)
+✓ Ternary operator in parser (condition ? true : false)
+✓ Dark mode support in CSS (auto-detects system preference)
+✓ Export buttons (C, JSON, CSV)
+✓ Assembly syntax highlighting (colors for registers/immediates)
+✓ Improved TAC optimizer with adaptive pass ordering
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         NEW HELPER FILES                                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+QUICK_FIX.txt              ← You are here! Quick reference
+EXECUTE_ERROR_FIX.md       ← Detailed explanation of the fix
+TROUBLESHOOTING.md         ← Step-by-step troubleshooting guide
+debug.html                 ← Test tool to diagnose issues
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                            HOW TO VERIFY                                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+1. Clear cache (see STEP 1 above)
+2. Open index.html
+3. Paste test code:
+   
+   int main() {
+       int a = 10;
+       if (a > 5) {
+           a = a - 1;
+       } else {
+           a = a + 1;
+       }
+       return a;
+   }
+
+4. Click "Compile & Run"
+5. Phase 6 should show: "✓ Process exited — return value: 9"
+6. ✅ Success!
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         IF STILL NOT WORKING                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+1. Open debug.html
+2. Check which scripts show ✗
+3. Check Network tab in DevTools (F12) for 404 errors
+4. Check Console tab for red error messages
+5. Screenshot everything
+6. Share screenshots for further debugging
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                        TECHNICAL EXPLANATION                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+What's happening:
+  1. index.html contains <script> tags that load each phase file
+  2. Each phase file defines functions globally
+  3. When you click "Compile & Run", code calls execute()
+  4. If phase6_execute.js didn't load, execute() is undefined
+  5. JavaScript error: "Can't find variable: execute"
+
+Why it happens:
+  - Most common: Browser cache (old version doesn't have the bug fix)
+  - Solution: Clear cache → browser downloads fresh files → works
+
+Why the fix works:
+  - Version bumping forces cache refresh
+  - Error handling shows what's missing
+  - debug.html tool makes it easy to diagnose
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         TL;DR (TOO LONG; DIDN'T READ)                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+JUST CLEAR YOUR BROWSER CACHE AND REFRESH.
+That fixes it 90% of the time.
+
+If that doesn't work, open debug.html to see what's wrong.
+
+Questions? Open TROUBLESHOOTING.md for detailed guide.

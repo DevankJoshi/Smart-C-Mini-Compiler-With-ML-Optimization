@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Execute Function</title>
+</head>
+<body>
+  <h1>Testing execute() function</h1>
+  <div id="output"></div>
+
+  <!-- Load all phase files in order -->
+  <script src="phase0_utils.js"></script>
+  <script src="phase1_lexer.js"></script>
+  <script src="phase2_parser.js"></script>
+  <script src="phase3_semantic.js"></script>
+  <script src="phase4_ir.js"></script>
+  <script src="phase5_codegen.js"></script>
+  <script src="phase6_execute.js"></script>
+  <script src="phase7_optimizer.js"></script>
+
+  <script>
+    // Test immediately
+    const out = document.getElementById('output');
+    
+    // Check each function
+    const checks = {
+      'lex': typeof lex,
+      'parse': typeof parse,
+      'semanticAnalysis': typeof semanticAnalysis,
+      'generateIR': typeof generateIR,
+      'generateAsm': typeof generateAsm,
+      'execute': typeof execute,
+      'optimizeTAC': typeof optimizeTAC
+    };
+    
+    let html = '<pre>';
+    for (const [name, type] of Object.entries(checks)) {
+      const status = type === 'function' ? '✓' : '✗';
+      html += `${status} ${name}: ${type}\n`;
+    }
+    html += '</pre>';
+    
+    // Test with simple code
+    if (typeof execute === 'function') {
+      try {
+        html += '<h2>Testing compilation:</h2><pre>';
+        const code = 'int main() { return 5; }';
+        const tokens = lex(code);
+        html += `✓ Lexer: ${tokens.length} tokens\n`;
+        
+        const ast = parse(tokens);
+        html += `✓ Parser: AST created\n`;
+        
+        const result = execute(ast);
+        html += `✓ Execute: returned ${result.ret}\n`;
+        html += '</pre>';
+      } catch(e) {
+        html += '<h2>Error during compilation:</h2><pre>' + e.message + '</pre>';
+      }
+    }
+    
+    out.innerHTML = html;
+  </script>
+</body>
+</html>

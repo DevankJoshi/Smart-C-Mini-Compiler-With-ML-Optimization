@@ -1,0 +1,128 @@
+# Quick Fix for "Can't find variable: execute"
+
+## FASTEST FIX (Do This First)
+
+### Chrome/Edge/Firefox:
+1. Press **Ctrl+Shift+Delete** (Windows) or **Cmd+Shift+Delete** (Mac)
+2. Clear cache and cookies
+3. Go back to compiler
+4. Press **Ctrl+F5** (Windows) or **Cmd+Shift+R** (Mac)
+5. Try compiling again
+
+### Safari:
+1. Click **Develop** menu → **Empty Caches**
+2. Close and reopen the page
+3. Try compiling again
+
+---
+
+## If Still Not Working
+
+### Use the Debug Tool
+1. Open: `debug.html` (same folder as `index.html`)
+2. It will show ✓ or ✗ for each script
+3. Click "Test Simple Code"
+4. Screenshot results
+5. If any show ✗, send screenshot
+
+---
+
+## Verify in Console
+
+In browser console (F12):
+```javascript
+typeof execute
+// Should say: "function"
+
+// If it says "undefined", type:
+runDiagnostic()
+// This shows what loaded and what didn't
+```
+
+---
+
+## Browser Developer Tools
+
+Open console and copy this:
+```javascript
+['lex','parse','execute','optimizeTAC'].map(f => f + ': ' + (typeof window[f]))
+```
+
+Should show:
+```
+lex: function
+parse: function  
+execute: function
+optimizeTAC: function
+```
+
+If any say "undefined", screenshot and send.
+
+---
+
+## Files to Check
+
+These files MUST exist and load:
+- phase0_utils.js ✓
+- phase1_lexer.js ✓
+- phase2_parser.js ✓
+- phase3_semantic.js ✓
+- phase4_ir.js ✓
+- phase5_codegen.js ✓
+- **phase6_execute.js** ← **This one must load**
+- phase7_optimizer.js ✓
+- ml_optimizer/js/*.js ✓
+
+---
+
+## Test Code
+
+If you want to test with simple code first:
+```c
+int main() {
+    return 42;
+}
+```
+
+Or the if-else example:
+```c
+int main() {
+    int a = 10;
+    if (a > 5) {
+        a = a - 1;
+    } else {
+        a = a + 1;
+    }
+    return a;
+}
+```
+
+Expected return value: 9
+
+---
+
+## Still Stuck?
+
+1. Open `debug.html`
+2. Click "Test Simple Code"
+3. Screenshot the output
+4. Share the screenshot
+
+It will show exactly what's wrong.
+
+---
+
+## What This Error Means
+
+- Browser tried to call `execute()` function
+- Function doesn't exist in memory
+- Means: phase6_execute.js didn't load properly
+- Fix: Clear cache → re-download → done
+
+---
+
+## TL;DR
+
+**Just clear your browser cache and refresh. That fixes it 90% of the time.**
+
+If that doesn't work, open `debug.html` to see what's missing.

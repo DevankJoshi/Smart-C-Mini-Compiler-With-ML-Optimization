@@ -189,33 +189,33 @@
   <footer>SmartC Compiler</footer>
 
   <!-- Phase 0: Shared utilities & sample programs -->
-  <script src="phase0_utils.js?v=3"></script>
+  <script src="phase0_utils.js?v=4"></script>
   <!-- Phase 1: Lexer — source text → token stream -->
-  <script src="phase1_lexer.js?v=3"></script>
+  <script src="phase1_lexer.js?v=4"></script>
   <!-- Phase 2: Parser — tokens → Abstract Syntax Tree (AST) -->
-  <script src="phase2_parser.js?v=3"></script>
+  <script src="phase2_parser.js?v=4"></script>
   <!-- Phase 3: Semantic Analysis — type checking & symbol table -->
-  <script src="phase3_semantic.js?v=3"></script>
+  <script src="phase3_semantic.js?v=4"></script>
   <!-- Phase 4: IR Generation — AST → Three-Address Code (TAC) -->
-  <script src="phase4_ir.js?v=3"></script>
+  <script src="phase4_ir.js?v=4"></script>
   <!-- Phase 5: Code Generation — TAC → pseudo x86 assembly -->
-  <script src="phase5_codegen.js?v=3"></script>
+  <script src="phase5_codegen.js?v=4"></script>
   <!-- Phase 6: Execution — tree-walking interpreter -->
-  <script src="phase6_execute.js?v=3"></script>
+  <script src="phase6_execute.js?v=4"></script>
   <!-- Phase 7: TAC Optimizer — real optimization passes on IR -->
-  <script src="phase7_optimizer.js?v=5"></script>
+  <script src="phase7_optimizer.js?v=6"></script>
   <!-- ML Optimizer: Feature extraction from TAC -->
-  <script src="ml_optimizer/js/feature_extractor.js?v=1"></script>
+  <script src="ml_optimizer/js/feature_extractor.js?v=2"></script>
   <!-- ML Optimizer: Logistic Regression model from scratch -->
-  <script src="ml_optimizer/js/model.js?v=1"></script>
+  <script src="ml_optimizer/js/model.js?v=2"></script>
   <!-- ML Optimizer: ML-guided optimization selection -->
-  <script src="ml_optimizer/js/ml_optimizer.js?v=1"></script>
+  <script src="ml_optimizer/js/ml_optimizer.js?v=2"></script>
   <!-- ML Optimizer: TAC to C code generation -->
-  <script src="ml_optimizer/js/tac_to_c.js?v=1"></script>
+  <script src="ml_optimizer/js/tac_to_c.js?v=2"></script>
   <!-- ML Optimizer: Integration layer and high-level API -->
-  <script src="ml_optimizer/js/integration.js?v=1"></script>
+  <script src="ml_optimizer/js/integration.js?v=2"></script>
   <!-- Compiler Driver — orchestrates all 7 phases -->
-  <script src="compiler_driver.js?v=5"></script>
+  <script src="compiler_driver.js?v=7"></script>
 
   <script>
     // Dark mode toggle
@@ -287,6 +287,56 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', initDarkMode);
+  </script>
+
+  <script>
+    // Diagnostic script - ensure all functions are loaded
+    console.log('Starting diagnostic...');
+    
+    function runDiagnostic() {
+      const requiredFunctions = {
+        'lexer': ['lex'],
+        'parser': ['parse'],
+        'semantic': ['semanticAnalysis'],
+        'ir_gen': ['generateIR'],
+        'codegen': ['generateAsm'],
+        'executor': ['execute'],
+        'optimizer': ['optimizeTAC'],
+        'render': ['renderTokens', 'astToSvg', 'renderSemantic', 'renderIR', 'renderAsm', 'renderExec']
+      };
+      
+      const results = {};
+      for (const [category, fns] of Object.entries(requiredFunctions)) {
+        results[category] = fns.map(fn => ({
+          name: fn,
+          loaded: typeof window[fn] === 'function'
+        }));
+      }
+      
+      const missing = [];
+      for (const category in results) {
+        for (const fn of results[category]) {
+          if (!fn.loaded) missing.push(fn.name);
+        }
+      }
+      
+      console.log('Diagnostic complete:');
+      console.log('Missing functions:', missing.length > 0 ? missing : 'none');
+      
+      if (missing.length === 0) {
+        console.log('✓ All compiler functions loaded successfully');
+      } else {
+        console.warn('⚠️  Missing:', missing.join(', '));
+      }
+      
+      return { results, missing };
+    }
+    
+    // Run diagnostic when page is fully loaded
+    window.addEventListener('load', function() {
+      console.log('Page load complete, running diagnostic...');
+      runDiagnostic();
+    });
   </script>
 
 </body>
