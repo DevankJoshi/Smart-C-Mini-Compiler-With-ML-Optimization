@@ -15,7 +15,7 @@
     <div class="logo">
       <div class="logo-icon">C</div>
       <span class="logo-text">Mini C Compiler</span>
-      <span class="logo-sub">&nbsp;— 6 Phases Visualised</span>
+      <span class="logo-sub">&nbsp;— 8 Phases Visualised (with ML)</span>
     </div>
     <div class="header-right">
       <select id="sample-select" onchange="loadSample(this.value)">
@@ -31,10 +31,6 @@
         <option value="nested">Nested expressions</option>
       </select>
       <button class="btn btn-run" onclick="compile()">&#9654; Compile &amp; Run</button>
-      <button class="btn" onclick="exportCode('c')">Export C</button>
-      <button class="btn" onclick="exportCode('json')">Export JSON</button>
-      <button class="btn" onclick="exportCode('csv')">Export CSV</button>
-      <button class="btn" onclick="toggleDarkMode()">🌙 Dark</button>
       <button class="btn" onclick="clearAll()">Clear</button>
     </div>
   </header>
@@ -46,7 +42,8 @@
     <div class="pip-step" id="pip-4">4. IR Gen</div><span class="pip-arrow">&#8594;</span>
     <div class="pip-step" id="pip-5">5. Code Gen</div><span class="pip-arrow">&#8594;</span>
     <div class="pip-step" id="pip-6">6. Execute</div><span class="pip-arrow">&#8594;</span>
-    <div class="pip-step" id="pip-7">7. TAC Optimizer</div>
+    <div class="pip-step" id="pip-7">7. TAC Optimizer</div><span class="pip-arrow">&#8594;</span>
+    <div class="pip-step" id="pip-8">8. ML Comparison</div>
   </div>
 
   <div class="main">
@@ -183,6 +180,18 @@
         </div>
       </div>
 
+      <div class="phase-card" id="ph-8">
+        <div class="phase-hdr" onclick="toggle('ph-8')">
+          <div class="ph-num">8</div>
+          <span class="ph-name">ML Model Comparison</span>
+          <span class="ph-desc">All 4 models · Predictions · Accuracy metrics</span>
+          <span class="ph-chevron">&#9658;</span>
+        </div>
+        <div class="phase-body">
+          <div id="out-8"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -208,85 +217,29 @@
   <script src="ml_optimizer/js/feature_extractor.js?v=2"></script>
   <!-- ML Optimizer: Logistic Regression model from scratch -->
   <script src="ml_optimizer/js/model.js?v=2"></script>
+  <!-- ML Optimizer: Multi-model ensemble (4 models) -->
+  <script src="ml_optimizer/js/multi_models.js?v=1"></script>
+  <!-- ML Optimizer: Multi-model integration -->
+  <script src="ml_optimizer/js/ml_optimizer_multi.js?v=1"></script>
   <!-- ML Optimizer: ML-guided optimization selection -->
   <script src="ml_optimizer/js/ml_optimizer.js?v=2"></script>
   <!-- ML Optimizer: TAC to C code generation -->
   <script src="ml_optimizer/js/tac_to_c.js?v=2"></script>
   <!-- ML Optimizer: Integration layer and high-level API -->
   <script src="ml_optimizer/js/integration.js?v=2"></script>
+  <!-- ML Comparison Panel: Display all 4 models with detailed metrics -->
+  <script src="ml_comparison.js?v=1"></script>
   <!-- Compiler Driver — orchestrates all 7 phases -->
   <script src="compiler_driver.js?v=7"></script>
 
   <script>
-    // Dark mode toggle
-    function toggleDarkMode() {
-      const html = document.documentElement;
-      const isDark = html.style.colorScheme === 'dark';
-      if (isDark) {
-        html.style.colorScheme = 'light';
-        localStorage.setItem('colorScheme', 'light');
-      } else {
-        html.style.colorScheme = 'dark';
-        localStorage.setItem('colorScheme', 'dark');
+    // Initialize ML models on page load
+    window.addEventListener('load', async function() {
+      console.log('Initializing multi-model ML system...');
+      if (typeof initializeMLModels === 'function') {
+        await initializeMLModels();
       }
-    }
-
-    // Initialize dark mode from localStorage or system preference
-    function initDarkMode() {
-      const saved = localStorage.getItem('colorScheme');
-      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
-        document.documentElement.style.colorScheme = 'dark';
-      } else {
-        document.documentElement.style.colorScheme = 'light';
-      }
-    }
-
-    // Export functions
-    function exportCode(format) {
-      const source = document.getElementById('src-editor').value;
-      const timestamp = new Date().toISOString().split('T')[0];
-      
-      if (format === 'c') {
-        const blob = new Blob([source], {type: 'text/plain'});
-        downloadFile(blob, `code_${timestamp}.c`);
-      } else if (format === 'json') {
-        const data = {
-          source: source,
-          timestamp: timestamp,
-          phases: {
-            lexer: window.lastLexerOutput || null,
-            parser: window.lastParserOutput || null,
-            semantic: window.lastSemanticOutput || null,
-            ir: window.lastIROutput || null,
-            execution: window.lastExecOutput || null
-          }
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-        downloadFile(blob, `compilation_${timestamp}.json`);
-      } else if (format === 'csv') {
-        const tokens = window.lastLexerOutput || [];
-        let csv = 'Value,Type,Line,Column\n';
-        tokens.forEach(t => {
-          csv += `"${t.val}","${t.type}",${t.line || '?'},${t.col || '?'}\n`;
-        });
-        const blob = new Blob([csv], {type: 'text/csv'});
-        downloadFile(blob, `tokens_${timestamp}.csv`);
-      }
-    }
-
-    function downloadFile(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', initDarkMode);
+    });
   </script>
 
   <script>

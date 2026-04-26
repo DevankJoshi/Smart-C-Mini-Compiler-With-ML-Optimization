@@ -110,6 +110,21 @@ function compile() {
       if (out) out.innerHTML = `<div class="alert-err">Optimizer error: ${esc(e.message)}</div>`;
       activatePhase(7, true);
     }
+
+    // Phase 8 — ML Model Comparison Panel
+    try {
+      if (window.lastMLReport && typeof renderMLComparison === 'function') {
+        renderMLComparison(window.lastMLReport);
+        activatePhase(8, false);
+      } else {
+        document.getElementById('out-8').innerHTML = '<span style="color:var(--text3)">ML system not available or models not initialized</span>';
+        activatePhase(8, false);
+      }
+    } catch(e) {
+      const out = document.getElementById('out-8');
+      if (out) out.innerHTML = `<div class="alert-err">ML Comparison error: ${esc(e.message)}</div>`;
+      activatePhase(8, true);
+    }
   } catch(outerError) {
     console.error('Compilation outer error:', outerError);
     document.getElementById('out-1').innerHTML = `<div class="alert-err">FATAL: ${esc(outerError.message)}</div>`;
