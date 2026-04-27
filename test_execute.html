@@ -7,7 +7,6 @@
   <h1>Testing execute() function</h1>
   <div id="output"></div>
 
-  <!-- Load all phase files in order -->
   <script src="phase0_utils.js"></script>
   <script src="phase1_lexer.js"></script>
   <script src="phase2_parser.js"></script>
@@ -18,10 +17,9 @@
   <script src="phase7_optimizer.js"></script>
 
   <script>
-    // Test immediately
-    const out = document.getElementById('output');
     
-    // Check each function
+    const out = document.getElementById('output');
+
     const checks = {
       'lex': typeof lex,
       'parse': typeof parse,
@@ -38,8 +36,7 @@
       html += `${status} ${name}: ${type}\n`;
     }
     html += '</pre>';
-    
-    // Test with simple code
+
     if (typeof execute === 'function') {
       try {
         html += '<h2>Testing compilation:</h2><pre>';

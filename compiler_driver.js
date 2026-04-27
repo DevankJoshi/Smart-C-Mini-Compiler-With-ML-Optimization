@@ -1,18 +1,22 @@
-/* ═══════════════════════════════════════════════════════
-   MAIN COMPILE DRIVER — runs all 6 phases in sequence,
-   stops and marks phase red on first hard error.
-═══════════════════════════════════════════════════════ */
-function compile() {
+
+async function compile() {
+  
+  if (typeof mlModelManager !== 'undefined' && mlModelManager === null && typeof initializeMLModels === 'function') {
+    try {
+      await initializeMLModels();
+    } catch(e) {
+      console.warn('ML model init failed during compile:', e);
+    }
+  }
   try {
     resetAll();
     const src=document.getElementById('src-editor').value.trim();
     if(!src) return;
 
-    // Phase 1 — Lex
     let tokens;
     try {
       tokens=lex(src);
-      window.lastLexerOutput = tokens;  // Store for export
+      window.lastLexerOutput = tokens;  
       document.getElementById('out-1').innerHTML=renderTokens(tokens);
       activatePhase(1,false);
     } catch(e) {
@@ -20,11 +24,10 @@ function compile() {
       activatePhase(1,true); return;
     }
 
-    // Phase 2 — Parse
     let ast;
     try {
       ast=parse(tokens);
-      window.lastParserOutput = ast;  // Store for export
+      window.lastParserOutput = ast;  
       document.getElementById('out-2').innerHTML=astToSvg(ast);
       activatePhase(2,false);
     } catch(e) {
@@ -32,10 +35,9 @@ function compile() {
       activatePhase(2,true); return;
     }
 
-    // Phase 3 — Semantic
     try {
       const sem=semanticAnalysis(ast);
-      window.lastSemanticOutput = sem;  // Store for export
+      window.lastSemanticOutput = sem;  
       document.getElementById('out-3').innerHTML=renderSemantic(sem);
       activatePhase(3, sem.errors.length>0);
     } catch(e) {
@@ -43,11 +45,10 @@ function compile() {
       activatePhase(3,true);
     }
 
-    // Phase 4 — IR
     let ir;
     try {
       ir=generateIR(ast);
-      window.lastIROutput = ir;  // Store for export
+      window.lastIROutput = ir;  
       document.getElementById('out-4').innerHTML=renderIR(ir);
       activatePhase(4,false);
     } catch(e) {
@@ -55,11 +56,10 @@ function compile() {
       activatePhase(4,true); return;
     }
 
-    // Phase 5 — Code gen (original)
     let asm;
     try {
       asm = generateAsm(ir);
-      window.lastCodegenOutput = asm;  // Store for export
+      window.lastCodegenOutput = asm;  
       document.getElementById('out-5').innerHTML = renderAsm(asm);
       activatePhase(5, false);
     } catch(e) {
@@ -67,13 +67,12 @@ function compile() {
       activatePhase(5, true);
     }
 
-    // Phase 6 — Execute (original)
     try {
       if (typeof execute !== 'function') {
         throw new Error(`execute function not found. Available functions: ${Object.keys(window).filter(k => typeof window[k] === 'function').slice(0,20).join(', ')}`);
       }
       const result = execute(ast);
-      window.lastExecOutput = result;  // Store for export
+      window.lastExecOutput = result;  
       document.getElementById('out-6').innerHTML = renderExec(result);
       activatePhase(6, false);
     } catch(e) {
@@ -81,21 +80,18 @@ function compile() {
       activatePhase(6, true);
     }
 
-    // Phase 7 — TAC Optimizer (ML-guided when available)
+    let mlReport = null;
     try {
       const useMLPath = (typeof optimizeTACWithML === 'function');
       const { optimizedIR, report } = useMLPath
         ? optimizeTACWithML(ir, true)
         : optimizeTAC(ir);
 
-      // Show side-by-side comparison + transformation log
-      const mlHeader = (useMLPath && typeof renderMLPrediction === 'function')
-        ? renderMLPrediction(report)
-        : '';
-      document.getElementById('out-7').innerHTML =
-        mlHeader + renderOptimizerResult(ir, optimizedIR, report);
+      mlReport = report;
 
-      // Also re-run codegen on optimized TAC and show optimized assembly
+      document.getElementById('out-7').innerHTML =
+        renderOptimizerResult(ir, optimizedIR, report);
+
       const optAsm = generateAsm(optimizedIR);
       const optAsmHtml = renderAsm(optAsm);
       document.getElementById('out-7').innerHTML +=
@@ -111,18 +107,21 @@ function compile() {
       activatePhase(7, true);
     }
 
-    // Phase 8 — ML Model Comparison Panel
     try {
-      if (window.lastMLReport && typeof renderMLComparison === 'function') {
-        renderMLComparison(window.lastMLReport);
+      const report8 = mlReport || window.lastMLReport;
+      if (report8 && report8.ml_report && typeof renderMLComparison === 'function') {
+        renderMLComparison(report8);
+        activatePhase(8, false);
+      } else if (report8 && !report8.ml_report) {
+        document.getElementById('out-8').innerHTML = '<span style="color:var(--text3)">⚠️ ML models not loaded. Make sure you are serving the page from a local server (not file://) so the model JSON can be fetched.</span>';
         activatePhase(8, false);
       } else {
-        document.getElementById('out-8').innerHTML = '<span style="color:var(--text3)">ML system not available or models not initialized</span>';
+        document.getElementById('out-8').innerHTML = '<span style="color:var(--text3)">No ML analysis available. Compile code first.</span>';
         activatePhase(8, false);
       }
     } catch(e) {
       const out = document.getElementById('out-8');
-      if (out) out.innerHTML = `<div class="alert-err">ML Comparison error: ${esc(e.message)}</div>`;
+      if (out) out.innerHTML = `<div class="alert-err">ML Comparison error: ${esc(e.message)}<br><small>${esc(e.stack||'')}</small></div>`;
       activatePhase(8, true);
     }
   } catch(outerError) {
@@ -131,6 +130,5 @@ function compile() {
   }
 }
 
-// Initialize on page load - comment out auto-compile for safety
-// window.addEventListener('DOMContentLoaded', compile);
+
 

@@ -1,27 +1,13 @@
-/* ═══════════════════════════════════════════════════════
-   PHASE 4 — INTERMEDIATE REPRESENTATION (THREE-ADDRESS CODE)
-   Each instruction: { op, dest, arg1, arg2, oper, params }
 
-   NEW in this version:
-   ● for loop TAC  (with separate update label for continue)
-   ● break / continue  →  goto breakLbl / continueLbl
-   ● array element access   arr[i]   →  t = arr[i]
-   ● array element assign   arr[i]=v →  arr[i] = v
-   ● unary -  /  !         →  unary op TAC instruction
-   ● prefix / postfix ++/-- →  explicit inc/dec assign
-   ● nested loop label stacks
-═══════════════════════════════════════════════════════ */
 function generateIR(ast) {
   let tmpN = 0, lblN = 0;
   const code = [];
   const newTmp = () => 't'+(++tmpN);
   const newLbl = () => 'L'+(++lblN);
 
-  // ── Loop label stacks for break / continue ──
-  const breakStack    = [];   // innermost break target
-  const continueStack = [];   // innermost continue target
+  const breakStack    = [];   
+  const continueStack = [];   
 
-  /* ── Expression code gen ── */
   function irExpr(e) {
     if (!e) return '0';
 
@@ -37,7 +23,7 @@ function generateIR(ast) {
       }
 
       case 'PrefixExpr': {
-        // ++i  or  --i  →  i = i ± 1 ; return i
+        
         const delta = e.op === '++' ? '1' : '-1';
         const t = newTmp();
         code.push({op:'binop', dest:t, arg1:e.name, arg2:'1',
@@ -47,24 +33,24 @@ function generateIR(ast) {
       }
 
       case 'PostfixExpr': {
-        // i++  or  i--  →  save old val, then i = i ± 1 ; return old
+        
         const old = newTmp(), nxt = newTmp();
-        code.push({op:'assign', dest:old, arg1:e.name}); // save
+        code.push({op:'assign', dest:old, arg1:e.name}); 
         code.push({op:'binop',  dest:nxt, arg1:e.name, arg2:'1',
                    oper: e.op === '++' ? '+' : '-'});
-        code.push({op:'assign', dest:e.name, arg1:nxt}); // writeback
-        return old; // expression value = old
+        code.push({op:'assign', dest:e.name, arg1:nxt}); 
+        return old; 
       }
 
       case 'AssignExpr': {
-        // used in for-update expressions
+        
         const v = irExpr(e.value);
         code.push({op:'assign', dest:e.name, arg1:v});
         return v;
       }
 
       case 'IndexExpr': {
-        // arr[i]  →  t = arr[irExpr(index)]
+        
         const idx = irExpr(e.index), t = newTmp();
         code.push({op:'index_load', dest:t, arg1:e.name, arg2:idx});
         return t;
@@ -88,7 +74,6 @@ function generateIR(ast) {
     }
   }
 
-  /* ── Statement code gen ── */
   function irStmt(s) {
     if (!s) return;
 
@@ -98,7 +83,7 @@ function generateIR(ast) {
           const v = irExpr(s.init);
           code.push({op:'assign', dest:s.name, arg1:v});
         } else if (s.arrSize) {
-          // Declare array — record its size
+          
           code.push({op:'array_decl', dest:s.name, arg1:String(s.arrSize)});
         }
         break;
@@ -110,7 +95,7 @@ function generateIR(ast) {
       }
 
       case 'ArrayAssignStmt': {
-        // arr[i] = expr
+        
         const idx = irExpr(s.index), val = irExpr(s.value);
         code.push({op:'index_store', dest:s.name, arg1:idx, arg2:val});
         break;
@@ -121,7 +106,7 @@ function generateIR(ast) {
         break;
 
       case 'ExprStmt':
-        irExpr(s.expr); // side effects only
+        irExpr(s.expr); 
         break;
 
       case 'IfStmt': {
@@ -149,25 +134,22 @@ function generateIR(ast) {
       }
 
       case 'ForStmt': {
-        // init
+        
         if (s.init) irStmt(s.init);
         const lCond   = newLbl();
         const lUpdate = newLbl();
         const lEnd    = newLbl();
 
-        // cond check
         code.push({op:'label', dest:lCond});
         if (s.cond) {
           const c = irExpr(s.cond);
           code.push({op:'iffalse', dest:lEnd, arg1:c});
         }
 
-        // body (break → lEnd, continue → lUpdate)
         breakStack.push(lEnd); continueStack.push(lUpdate);
         s.body.body.forEach(irStmt);
         breakStack.pop(); continueStack.pop();
 
-        // update
         code.push({op:'label', dest:lUpdate});
         if (s.update) irExpr(s.update);
         code.push({op:'goto', dest:lCond});
@@ -186,37 +168,35 @@ function generateIR(ast) {
         break;
 
       case 'DoWhileStmt': {
-        // do { body } while (cond);
-        // body runs first, then check condition
-        const lBody = newLbl();  // loop back target
-        const lCond = newLbl();  // continue target (re-evaluate cond)
-        const lEnd  = newLbl();  // break target
+
+        const lBody = newLbl();  
+        const lCond = newLbl();  
+        const lEnd  = newLbl();  
         code.push({op:'label', dest:lBody});
         breakStack.push(lEnd); continueStack.push(lCond);
         s.body.body.forEach(irStmt);
         breakStack.pop(); continueStack.pop();
-        // cond check at bottom
+        
         code.push({op:'label', dest:lCond});
         const dc = irExpr(s.cond);
-        code.push({op:'iftrue', dest:lBody, arg1:dc});  // loop if true
+        code.push({op:'iftrue', dest:lBody, arg1:dc});  
         code.push({op:'label', dest:lEnd});
         break;
       }
 
       case 'SwitchStmt': {
-        // Emit dispatch table, then contiguous bodies (fall-through support)
+        
         const tSwitch = newTmp();
         const switchVal = irExpr(s.expr);
         code.push({op:'assign', dest:tSwitch, arg1:switchVal});
 
         const bodyLabels   = s.cases.map(() => newLbl());
         const lEnd         = newLbl();
-        let   defaultLabel = lEnd; // jump here if no case matches
+        let   defaultLabel = lEnd; 
 
-        // ── Dispatch table ──
         s.cases.forEach((c, i) => {
           if (c.value === null) {
-            defaultLabel = bodyLabels[i]; // remember default label
+            defaultLabel = bodyLabels[i]; 
           } else {
             const cmpVal = irExpr(c.value);
             const tCmp   = newTmp();
@@ -224,9 +204,8 @@ function generateIR(ast) {
             code.push({op:'iftrue', dest:bodyLabels[i], arg1:tCmp});
           }
         });
-        code.push({op:'goto', dest:defaultLabel}); // no match
+        code.push({op:'goto', dest:defaultLabel}); 
 
-        // ── Case bodies (fall-through: no goto between them) ──
         breakStack.push(lEnd);
         s.cases.forEach((c, i) => {
           code.push({op:'label', dest:bodyLabels[i]});
@@ -246,7 +225,6 @@ function generateIR(ast) {
   return code;
 }
 
-/* ── IR renderer ── */
 function renderIR(code) {
   let n = 0;
   const rows = code.map(c => {

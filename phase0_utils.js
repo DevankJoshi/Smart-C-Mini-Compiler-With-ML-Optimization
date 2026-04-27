@@ -1,6 +1,4 @@
-/* ═══════════════════════════
-   SAMPLE PROGRAMS
-═══════════════════════════ */
+
 const SAMPLES = {
   basic:    `int main() {\n    int x = 5 + 3;\n    int y = x * 2;\n    return y;\n}`,
   if:       `int main() {\n    int a = 10;\n    if (a > 5) {\n        a = a - 1;\n    } else {\n        a = a + 1;\n    }\n    return a;\n}`,
@@ -15,9 +13,6 @@ const SAMPLES = {
 };
 function loadSample(k) { document.getElementById('src-editor').value = SAMPLES[k]; compile(); }
 
-/* ═══════════════════════════
-   UTILITIES
-═══════════════════════════ */
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toggle(id) { document.getElementById(id).classList.toggle('open'); }
 function resetAll() {

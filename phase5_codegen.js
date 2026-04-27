@@ -1,26 +1,17 @@
-/* ═══════════════════════════════════════════════════════
-   PHASE 5 — CODE GENERATION (pseudo x86 assembly)
-   Stack-frame based, accumulator model (eax).
 
-   NEW in this version:
-   ● unary  neg eax  /  not eax
-   ● prefix / postfix ++  dec / inc instructions
-   ● array_decl, index_load, index_store (symbolic refs)
-   ● for loop TAC maps naturally to same patterns as while
-═══════════════════════════════════════════════════════ */
 function generateAsm(ir) {
   const instr  = [];
-  const varOff = {}; // variable → stack offset (+ve = local, -ve = param)
+  const varOff = {}; 
   let sp = 4;
 
   function ref(name) {
     if (/^-?[0-9.]+$/.test(name)) return name;
     if (varOff[name] !== undefined) {
       return varOff[name] < 0
-        ? `[ebp+${-varOff[name]}]`   // parameter above frame
-        : `[ebp-${varOff[name]}]`;   // local below frame
+        ? `[ebp+${-varOff[name]}]`   
+        : `[ebp-${varOff[name]}]`;   
     }
-    return name; // label / unknown
+    return name; 
   }
   function alloc(name) { if (varOff[name] === undefined) { varOff[name] = sp; sp += 4; } }
   function emit(t, s, cmt) { instr.push({t, s, comment:cmt||''}); }
@@ -28,7 +19,6 @@ function generateAsm(ir) {
   ir.forEach(c => {
     switch (c.op) {
 
-      /* ── Function prologue ── */
       case 'func':
         Object.keys(varOff).forEach(k => delete varOff[k]); sp = 4;
         emit('lbl', c.dest+':');
@@ -41,14 +31,12 @@ function generateAsm(ir) {
         emit('lbl', c.dest+':');
         break;
 
-      /* ── Simple assignment ── */
       case 'assign':
         alloc(c.dest);
         emit('op', `mov eax, ${ref(c.arg1)}`,  `; load ${c.arg1}`);
         emit('op', `mov ${ref(c.dest)}, eax`,  `; store → ${c.dest}`);
         break;
 
-      /* ── Unary operator ── */
       case 'unary':
         alloc(c.dest);
         emit('op', `mov eax, ${ref(c.arg1)}`, `; load ${c.arg1}`);
@@ -61,7 +49,6 @@ function generateAsm(ir) {
         emit('op', `mov ${ref(c.dest)}, eax`, `; store unary result → ${c.dest}`);
         break;
 
-      /* ── Binary operation ── */
       case 'binop': {
         alloc(c.dest);
         emit('op', `mov eax, ${ref(c.arg1)}`, '; left operand');
@@ -95,15 +82,13 @@ function generateAsm(ir) {
         break;
       }
 
-      /* ── Array declaration (allocate stack space) ── */
       case 'array_decl':
-        // Reserve size*4 bytes; store base offset
+        
         alloc(c.dest);
         emit('op', `sub esp, ${(parseInt(c.arg1)-1)*4}`,
              `; reserve ${c.arg1} elements for ${c.dest}`);
         break;
 
-      /* ── Array element load  t = arr[i] ── */
       case 'index_load':
         alloc(c.dest);
         emit('op', `mov esi, ${ref(c.arg2)}`, `; index = ${c.arg2}`);
@@ -113,7 +98,6 @@ function generateAsm(ir) {
         emit('op', `mov ${ref(c.dest)}, eax`, `; store → ${c.dest}`);
         break;
 
-      /* ── Array element store  arr[i] = v ── */
       case 'index_store':
         emit('op', `mov esi, ${ref(c.arg1)}`, `; index = ${c.arg1}`);
         emit('op', `imul esi, 4`,              '; byte offset');
@@ -122,7 +106,6 @@ function generateAsm(ir) {
         emit('op', `mov [edi + esi], eax`,    '; store element');
         break;
 
-      /* ── Function call ── */
       case 'param':
         emit('op', `push ${ref(c.arg1)}`, '; push arg');
         break;
@@ -135,14 +118,12 @@ function generateAsm(ir) {
         emit('op', `mov ${ref(c.dest)}, eax`, `; capture return → ${c.dest}`);
         break;
 
-      /* ── Return ── */
       case 'return':
         if (c.arg1) emit('op', `mov eax, ${ref(c.arg1)}`, '; set return value');
         emit('op', 'pop ebp', '; restore base pointer');
         emit('op', 'ret',     '; return to caller');
         break;
 
-      /* ── Control flow ── */
       case 'iffalse':
         emit('op', 'cmp eax, 0');
         emit('op', `je ${c.dest}`, '; jump if false');
@@ -167,13 +148,12 @@ function renderAsm(instr) {
       return `<span class="asm-lbl">${esc(i.s)}</span>`;
     const parts = i.s.split(' '), op = parts[0], rest = parts.slice(1).join(' ');
     const cmt = i.comment ? `  <span class="asm-cmt">${esc(i.comment)}</span>` : '';
-    
-    // Syntax highlight operands: registers (%eax, etc), addresses ([...]), numbers
+
     let highlightedRest = esc(rest)
-      .replace(/(%[a-z0-9]+)/g, '<span style="color:var(--amber)">$1</span>')  // registers
-      .replace(/(\$\d+)/g, '<span style="color:var(--purple)">$1</span>')      // immediates
-      .replace(/(\[.*?\])/g, '<span style="color:var(--green)">$1</span>')     // memory addresses
-      .replace(/(,)/g, '<span style="color:var(--text3)">$1</span>');          // commas
+      .replace(/(%[a-z0-9]+)/g, '<span style="color:var(--amber)">$1</span>')  
+      .replace(/(\$\d+)/g, '<span style="color:var(--purple)">$1</span>')      
+      .replace(/(\[.*?\])/g, '<span style="color:var(--green)">$1</span>')     
+      .replace(/(,)/g, '<span style="color:var(--text3)">$1</span>');          
     
     return `    <span class="asm-op">${esc(op)}</span> ${highlightedRest}${cmt}`;
   }).join('\n');

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test JS</title>
+  <script>
+    window.addEventListener('error', function(e) {
+      document.body.innerHTML += '<div style="color:red">Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + '</div>';
+    });
+  </script>
+  <script src="ml_optimizer/js/multi_models.js"></script>
+</head>
+<body>
+  <h1>Test</h1>
+  <script>
+    if (typeof MLModelManager !== 'undefined') {
+      document.body.innerHTML += '<div style="color:green">MLModelManager is DEFINED</div>';
+    } else {
+      document.body.innerHTML += '<div style="color:red">MLModelManager is UNDEFINED</div>';
+    }
+  </script>
+</body>
+</html>

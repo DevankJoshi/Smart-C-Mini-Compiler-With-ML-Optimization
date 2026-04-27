@@ -62,7 +62,6 @@
       'generateAsm', 'execute', 'optimizeTAC'
     ];
 
-    // Load all scripts
     function loadPhases() {
       phases.forEach(phase => {
         const script = document.createElement('script');
@@ -78,7 +77,6 @@
         document.head.appendChild(script);
       });
 
-      // Check functions after a delay
       setTimeout(checkFunctions, 2000);
     }
 
@@ -164,7 +162,6 @@
       }
     }
 
-    // Start loading on page load
     window.addEventListener('load', loadPhases);
   </script>
 </body>

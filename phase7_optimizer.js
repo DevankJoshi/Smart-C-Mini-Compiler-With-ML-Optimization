@@ -1,16 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   PHASE 7 — TAC OPTIMIZER (v2)
-   Real compiler optimization passes on Three-Address Code.
 
-   Passes (run iteratively until stable, max 10 rounds):
-     1. Constant Folding       — t1 = 5+3  → t1 = 8
-     2. Constant Propagation   — x=10; t1=x+2 → t1=10+2
-     3. Copy Propagation       — y=x; t1=y+1  → t1=x+1
-     4. CSE                    — t1=a+b; t2=a+b → t2=t1
-     5. Branch Folding         — ifFalse 1 goto L  → (removed)
-     6. Unreachable Code Elim  — code after goto with no label
-     7. Dead Code Elimination  — remove assigns never read
-═══════════════════════════════════════════════════════ */
 
 function cloneIR(ir) {
   return ir.map(c => Object.assign({}, c));
@@ -40,7 +28,6 @@ function isConst(v) {
     /^-?[0-9]+(\.[0-9]+)?$/.test(String(v));
 }
 
-/* ── PASS 1: Constant Folding ─────────────────────────── */
 function passConstantFolding(ir) {
   let changed = false;
   const hits = [];
@@ -53,7 +40,7 @@ function passConstantFolding(ir) {
         changed = true;
       }
     }
-    // Also fold unary on constants
+    
     if (c.op === 'unary' && isConst(c.arg1)) {
       let val = null;
       if (c.oper === '-') val = -parseFloat(c.arg1);
@@ -68,12 +55,10 @@ function passConstantFolding(ir) {
   return { changed, hits };
 }
 
-/* ── PASS 2: Constant Propagation ─────────────────────── */
 function passConstantPropagation(ir) {
   let changed = false;
   const hits = [];
 
-  // Build: var → constant value (only if assigned exactly once w/ a const)
   const constVal = {};
   const assignCount = {};
   ir.forEach(c => {
@@ -85,7 +70,7 @@ function passConstantPropagation(ir) {
       else delete constVal[c.dest];
     }
   });
-  // Remove vars assigned more than once (they change at runtime)
+  
   Object.keys(assignCount).forEach(v => {
     if (assignCount[v] > 1) delete constVal[v];
   });
@@ -98,7 +83,7 @@ function passConstantPropagation(ir) {
         changed = true;
       }
     };
-    // Replace in uses, but skip the defining assignment itself
+    
     if (c.op === 'assign' && c.dest && constVal[c.dest] === c.arg1) return;
     replaceField('arg1');
     replaceField('arg2');
@@ -107,21 +92,17 @@ function passConstantPropagation(ir) {
   return { changed, hits };
 }
 
-/* ── PASS 2b: Local Constant Propagation ────────────────
-   Propagates constants within a basic block, even if the
-   variable is reassigned elsewhere. Clears on jump targets.
-─────────────────────────────────────────────────────── */
 function passLocalConstantPropagation(ir) {
   let changed = false;
   const hits = [];
   let constMap = {};
 
   ir.forEach((c, i) => {
-    // Clear state on block boundaries (labels/function starts)
+    
     if (c.op === 'label' || c.op === 'func') {
       constMap = {};
     } else {
-      // Replace reads first
+      
       ['arg1', 'arg2'].forEach(f => {
         if (c[f] && constMap[c[f]] !== undefined) {
           hits.push(`local-prop ${c[f]} = ${constMap[c[f]]} (line ${i})`);
@@ -130,12 +111,11 @@ function passLocalConstantPropagation(ir) {
         }
       });
 
-      // Update writes
       if (c.op === 'assign' && c.dest) {
         if (isConst(c.arg1)) constMap[c.dest] = c.arg1;
         else delete constMap[c.dest];
       } else if (c.dest) {
-        // Any other write (binop, call, etc.) invalidates it
+        
         delete constMap[c.dest];
       }
     }
@@ -143,7 +123,7 @@ function passLocalConstantPropagation(ir) {
 
   return { changed, hits };
 }
-/* ── PASS 3: Copy Propagation ─────────────────────────── */
+
 function passCopyPropagation(ir) {
   let changed = false;
   const hits = [];
@@ -169,7 +149,6 @@ function passCopyPropagation(ir) {
   return { changed, hits };
 }
 
-/* ── PASS 4: Common Subexpression Elimination ──────────── */
 function passCSE(ir) {
   let changed = false;
   const hits = [];
@@ -204,14 +183,6 @@ function passCSE(ir) {
   return { changed, hits };
 }
 
-/* ── PASS 5: Branch Folding ───────────────────────────────
-   When the condition of an ifTrue/ifFalse is a constant,
-   we know at compile time whether the branch is taken.
-   • ifFalse 0 goto L  → always branches  → replace with goto L
-   • ifFalse 1 goto L  → never branches   → remove the instruction
-   • iftrue  1 goto L  → always branches  → replace with goto L
-   • iftrue  0 goto L  → never branches   → remove the instruction
-─────────────────────────────────────────────────────────── */
 function passBranchFolding(ir) {
   let changed = false;
   const hits = [];
@@ -220,18 +191,17 @@ function passBranchFolding(ir) {
     if ((c.op === 'iffalse' || c.op === 'iftrue') && isConst(c.arg1)) {
       const val = parseFloat(c.arg1);
       const condTrue = val !== 0;
-      // iffalse branches when condition is FALSE (val === 0)
-      // iftrue  branches when condition is TRUE  (val !== 0)
+
       const branches =
         (c.op === 'iffalse' && !condTrue) ||
         (c.op === 'iftrue'  &&  condTrue);
 
       if (branches) {
-        // Always jumps → unconditional goto
+        
         hits.push(`Branch fold: always ${c.op} ${c.arg1} → goto ${c.dest}`);
         ir[i] = { op: 'goto', dest: c.dest };
       } else {
-        // Never jumps → remove entirely
+        
         hits.push(`Branch fold: never-taken ${c.op} ${c.arg1} → removed`);
         ir[i] = { op: '_dead_', dest: '', arg1: '' };
       }
@@ -239,23 +209,15 @@ function passBranchFolding(ir) {
     }
   });
 
-  // Remove _dead_ markers
   const before = ir.length;
   ir.splice(0, ir.length, ...ir.filter(c => c.op !== '_dead_'));
   return { changed, hits };
 }
 
-/* ── PASS 6: Unreachable Code Elimination ─────────────────
-   After folding branches, instructions between an
-   unconditional goto and the next label it does NOT target
-   are unreachable. Remove them.
-   Also remove labels that nobody jumps to.
-─────────────────────────────────────────────────────────── */
 function passUnreachable(ir) {
   let changed = false;
   const hits = [];
 
-  // Step 1: find all labels actually used as jump targets
   const usedLabels = new Set();
   ir.forEach(c => {
     if (c.op === 'goto')             usedLabels.add(c.dest);
@@ -263,15 +225,14 @@ function passUnreachable(ir) {
     if (c.op === 'iftrue')           usedLabels.add(c.dest);
   });
 
-  // Step 2: mark unreachable instructions (after goto until next used label)
   let unreachable = false;
   const keep = ir.map(c => {
     if (c.op === 'label') {
       if (usedLabels.has(c.dest)) {
-        unreachable = false; // landed here → reachable again
+        unreachable = false; 
         return { keep: true, c };
       } else {
-        // Label nobody jumps to — remove it
+        
         hits.push(`Unreachable label ${c.dest} removed`);
         changed = true;
         return { keep: false, c };
@@ -283,7 +244,7 @@ function passUnreachable(ir) {
       return { keep: false, c };
     }
     if (c.op === 'goto') {
-      unreachable = true; // instructions after unconditional goto are dead
+      unreachable = true; 
     }
     return { keep: true, c };
   });
@@ -292,9 +253,6 @@ function passUnreachable(ir) {
   return { changed, hits };
 }
 
-/* ── PASS 7: Dead Code Elimination ───────────────────────
-   Variables assigned but never subsequently read → remove.
-─────────────────────────────────────────────────────────── */
 function passDeadCode(ir) {
   let changed = false;
   const hits = [];
@@ -303,11 +261,11 @@ function passDeadCode(ir) {
   ir.forEach(c => {
     if (c.arg1 && !isConst(c.arg1))  used.add(c.arg1);
     if (c.arg2 && !isConst(c.arg2))  used.add(c.arg2);
-    // Control flow / call instructions implicitly use their dest label
-    if (c.op === 'goto')             {} // dest is a label, not a var
+    
+    if (c.op === 'goto')             {} 
     if (c.op === 'return' && c.arg1) used.add(c.arg1);
     if (c.op === 'param')            used.add(c.arg1);
-    if (c.op === 'call')             {} // call result dest might be unused
+    if (c.op === 'call')             {} 
   });
 
   const keep = ir.filter((c) => {
@@ -325,7 +283,6 @@ function passDeadCode(ir) {
   return { changed, hits };
 }
 
-/* ── MAIN OPTIMIZER ───────────────────────────────────── */
 function optimizeTAC(ir) {
   let opt = cloneIR(ir);
   const report = {
@@ -334,12 +291,11 @@ function optimizeTAC(ir) {
     rounds: 0,
     original_count: ir.filter(c => c.op !== 'label' && c.op !== 'func').length,
     optimized_count: 0,
-    passMetrics: {} // Track effectiveness of each pass
+    passMetrics: {} 
   };
 
   const MAX_ROUNDS = 10;
-  
-  // Define passes with priority (high-impact passes first)
+
   const passes = [
     { name: 'Dead Code Elimination', fn: passDeadCode, priority: 1 },
     { name: 'Unreachable Code Elim', fn: passUnreachable, priority: 2 },
@@ -354,11 +310,10 @@ function optimizeTAC(ir) {
   for (let round = 0; round < MAX_ROUNDS; round++) {
     let anyChange = false;
 
-    // Sort passes by priority and effectiveness from previous rounds
     const sorted = passes.slice().sort((a, b) => {
       const effA = report.passMetrics[a.name] || 0;
       const effB = report.passMetrics[b.name] || 0;
-      if (effB !== effA) return effB - effA; // Higher effectiveness first
+      if (effB !== effA) return effB - effA; 
       return a.priority - b.priority;
     });
 
@@ -370,7 +325,7 @@ function optimizeTAC(ir) {
 
       if (changed) {
         anyChange = true;
-        // Track effectiveness for future round prioritization
+        
         report.passMetrics[name] = (report.passMetrics[name] || 0) + impact;
         hits.forEach(h => report.passes.push({ round: round + 1, pass: name, detail: h }));
         report.totalHits += hits.length;
@@ -385,7 +340,6 @@ function optimizeTAC(ir) {
   return { optimizedIR: opt, report };
 }
 
-/* ── RENDERER ─────────────────────────────────────────── */
 function renderOptimizerResult(originalIR, optimizedIR, report) {
   const removed = report.original_count - report.optimized_count;
   const pct = report.original_count > 0

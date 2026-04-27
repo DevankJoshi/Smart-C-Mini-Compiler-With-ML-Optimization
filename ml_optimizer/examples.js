@@ -1,10 +1,5 @@
-/* ═══════════════════════════════════════════════════════
-   EXAMPLE TEST PROGRAMS FOR ML OPTIMIZER
-   
-   These demonstrate different optimization patterns
-═══════════════════════════════════════════════════════ */
 
-// Example 1: Constant Folding Opportunity
+
 const EXAMPLE_CONST_FOLD = `
 int main() {
     int x = 5 + 3;
@@ -14,7 +9,6 @@ int main() {
 }
 `;
 
-// Example 2: Dead Code Elimination
 const EXAMPLE_DEAD_CODE = `
 int main() {
     int unused1 = 10;
@@ -25,7 +19,6 @@ int main() {
 }
 `;
 
-// Example 3: Common Subexpression Elimination
 const EXAMPLE_CSE = `
 int main() {
     int a = 5, b = 3;
@@ -37,7 +30,6 @@ int main() {
 }
 `;
 
-// Example 4: Loop-Heavy Code
 const EXAMPLE_LOOPS = `
 int main() {
     int sum = 0;
@@ -49,7 +41,6 @@ int main() {
 }
 `;
 
-// Example 5: Complex Mixed Pattern
 const EXAMPLE_MIXED = `
 int main() {
     int x = 100;
@@ -63,9 +54,6 @@ int main() {
 }
 `;
 
-/**
- * Run all examples and show optimization results
- */
 function runAllExamples() {
   const examples = [
     { name: 'Constant Folding', code: EXAMPLE_CONST_FOLD },
@@ -110,7 +98,6 @@ function runAllExamples() {
   console.log('\n' + '='.repeat(70));
 }
 
-// Export
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     EXAMPLE_CONST_FOLD,

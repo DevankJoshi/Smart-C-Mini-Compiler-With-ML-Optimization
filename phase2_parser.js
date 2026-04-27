@@ -1,18 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   PHASE 2 — RECURSIVE-DESCENT PARSER
-   Builds a full AST. Supported constructs:
 
-   NEW in this version:
-   ● for (init; cond; update) { … }
-   ● break;  /  continue;
-   ● int arr[N];  (array declaration)
-   ● arr[i]        (index expression)
-   ● arr[i] = v;  (array element assignment)
-   ● i++  i--  ++i  --i  (postfix / prefix)
-   ● -expr  !expr          (unary operators)
-   ● i += v  i -= v        (compound assignment)
-   ● char literals (already numbers from lexer)
-═══════════════════════════════════════════════════════ */
 function parse(tokens) {
   let pos = 0;
   const cur  = () => tokens[pos];
@@ -28,14 +14,11 @@ function parse(tokens) {
   const isType = () => cur() && ['int','float','char','void'].includes(cur().val);
   const parseType = () => isType() ? eat().val : null;
 
-  /* ── Expression precedence (low → high) ───────────────
-     Ternary → Or → And → Cmp → Add/Sub → Mul/Div → Unary → Call/Index/Postfix → Primary
-  ──────────────────────────────────────────────────────── */
   const parseExpr   = () => parseTernary();
   const parseTernary = () => {
     let cond = parseOr();
     if (cur() && cur().val === '?') {
-      eat(); // ?
+      eat(); 
       const trueExpr = parseExpr();
       expect(':');
       const falseExpr = parseTernary();
@@ -62,7 +45,6 @@ function parse(tokens) {
     return l;
   }
 
-  /* Unary:  -expr   !expr   ++ident   --ident */
   function parseUnary() {
     if (cur() && cur().val === '-') {
       eat();
@@ -72,26 +54,24 @@ function parse(tokens) {
       eat();
       return {type:'UnaryExpr', op:'!', operand:parseUnary()};
     }
-    // Prefix ++ / --
+    
     if (cur() && (cur().val === '++' || cur().val === '--')) {
       const op = eat().val;
-      const name = eat().val; // expect IDENT
+      const name = eat().val; 
       return {type:'PrefixExpr', op, name};
     }
     return parsePostfix();
   }
 
-  /* Postfix: call, index, i++, i-- */
   function parsePostfix() {
     let n = parsePrimary();
     if (!n) return n;
 
-    // Repeat to handle chained operations
-    // eslint-disable-next-line no-constant-condition
+    
     while (true) {
-      // Function call:  ident(args)
+      
       if (n.type === 'Ident' && cur() && cur().val === '(') {
-        eat(); // (
+        eat(); 
         const args = [];
         while (cur() && cur().val !== ')') {
           args.push(parseExpr());
@@ -101,15 +81,15 @@ function parse(tokens) {
         n = {type:'CallExpr', name:n.name, args};
         continue;
       }
-      // Array index:  ident[expr]
+      
       if (n.type === 'Ident' && cur() && cur().val === '[') {
-        eat(); // [
+        eat(); 
         const index = parseExpr();
         expect(']');
         n = {type:'IndexExpr', name:n.name, index};
         continue;
       }
-      // Postfix ++ / --
+      
       if (n.type === 'Ident' && cur() && (cur().val === '++' || cur().val === '--')) {
         const op = eat().val;
         n = {type:'PostfixExpr', op, name:n.name};
@@ -131,14 +111,13 @@ function parse(tokens) {
     if (cur().val === '(') {
       eat(); const e = parseExpr(); expect(')'); return e;
     }
-    // Type cast:  (int)expr  — skip the cast, parse the expression
+    
     if (isType() && peek(1) && peek(1).val === ')') {
       eat(); eat(); return parseUnary();
     }
     throw new Error(`Unexpected token '${cur().val}'`);
   }
 
-  /* ── Statement parser ─────────────────────────────── */
   function parseBlock() {
     expect('{');
     const stmts = [];
@@ -147,32 +126,30 @@ function parse(tokens) {
     return {type:'Block', body:stmts};
   }
 
-  /* Shared helper for for-loop update expression (no trailing ;) */
   function parseForUpdate() {
     if (!cur() || cur().val === ')') return null;
-    // compound assign  i += expr   i -= expr
+    
     if (cur().type === 'IDENT' && peek(1) && ['+=','-=','*=','/='].includes(peek(1).val)) {
       const name = eat().val;
-      const op   = eat().val;           // += etc.
+      const op   = eat().val;           
       const rhs  = parseExpr();
-      const opChar = op[0];             // '+' from '+='
+      const opChar = op[0];             
       return {type:'AssignExpr', name,
               value:{type:'BinaryExpr', op:opChar,
                      left:{type:'Ident',name}, right:rhs}};
     }
-    // plain assign  i = expr
+    
     if (cur().type === 'IDENT' && peek(1) && peek(1).val === '=') {
       const name = eat().val; eat();
       return {type:'AssignExpr', name, value:parseExpr()};
     }
-    // anything else (i++, ++i, expr)
+    
     return parseExpr();
   }
 
   function parseStmt() {
     if (!cur()) return null;
 
-    /* ── if ── */
     if (cur().val === 'if') {
       eat(); expect('('); const cond = parseExpr(); expect(')');
       const body = parseBlock();
@@ -181,46 +158,40 @@ function parse(tokens) {
       return {type:'IfStmt', cond, body, else:elseBody};
     }
 
-    /* ── while ── */
     if (cur().val === 'while') {
       eat(); expect('('); const cond = parseExpr(); expect(')');
       return {type:'WhileStmt', cond, body:parseBlock()};
     }
 
-    /* ── for (init; cond; update) ── */
     if (cur().val === 'for') {
       eat(); expect('(');
-      // init (a full statement with its semicolon, or just ';')
+      
       let init = null;
       if (cur() && cur().val !== ';') {
-        init = parseStmt(); // eats its own ';'
+        init = parseStmt(); 
       } else {
-        eat(); // eat bare ';'
+        eat(); 
       }
-      // cond
+      
       let cond = null;
       if (cur() && cur().val !== ';') cond = parseExpr();
       expect(';');
-      // update (no semicolon)
+      
       const update = parseForUpdate();
       expect(')');
       return {type:'ForStmt', init, cond, update, body:parseBlock()};
     }
 
-    /* ── return ── */
     if (cur().val === 'return') {
       eat();
       const val = cur() && cur().val !== ';' ? parseExpr() : null;
       expect(';'); return {type:'ReturnStmt', value:val};
     }
 
-    /* ── break ── */
     if (cur().val === 'break') { eat(); expect(';'); return {type:'BreakStmt'}; }
 
-    /* ── continue ── */
     if (cur().val === 'continue') { eat(); expect(';'); return {type:'ContinueStmt'}; }
 
-    /* ── do-while ── */
     if (cur().val === 'do') {
       eat();
       const body = parseBlock();
@@ -230,7 +201,6 @@ function parse(tokens) {
       return {type:'DoWhileStmt', body, cond};
     }
 
-    /* ── switch (expr) { case v: … default: … } ── */
     if (cur().val === 'switch') {
       eat(); expect('(');
       const expr = parseExpr();
@@ -256,7 +226,7 @@ function parse(tokens) {
           }
           cases.push({value:null, body});
         } else {
-          break; // unexpected
+          break; 
         }
       }
       expect('}');
@@ -265,7 +235,7 @@ function parse(tokens) {
 
     if (isType()) {
       const dtype = parseType(), name = eat().val;
-      // Array declaration:  int arr[N];
+      
       let arrSize = null;
       if (cur() && cur().val === '[') {
         eat();
@@ -278,20 +248,18 @@ function parse(tokens) {
       return {type:'VarDecl', dtype, name, arrSize, init};
     }
 
-    /* ── array element assignment:  arr[i] = expr; ── */
     if (cur().type === 'IDENT' && peek(1) && peek(1).val === '[') {
       const name = eat().val;
-      eat(); // [
+      eat(); 
       const index = parseExpr();
       expect(']');
-      // compound assign on array element?  (unlikely but handle =)
+      
       expect('=');
       const value = parseExpr();
       expect(';');
       return {type:'ArrayAssignStmt', name, index, value};
     }
 
-    /* ── variable assignment (simple or compound) ── */
     if (cur().type === 'IDENT' && peek(1) &&
         ['=','+=','-=','*=','/='].includes(peek(1).val)) {
       const name = eat().val;
@@ -299,13 +267,12 @@ function parse(tokens) {
       const rhs  = parseExpr();
       expect(';');
       if (op === '=') return {type:'AssignStmt', name, value:rhs};
-      // compound  →  name = name OP rhs
+      
       return {type:'AssignStmt', name,
               value:{type:'BinaryExpr', op:op[0],
                      left:{type:'Ident',name}, right:rhs}};
     }
 
-    /* ── expression statement (covers i++; etc.) ── */
     const expr = parseExpr(); expect(';');
     return {type:'ExprStmt', expr};
   }
@@ -328,9 +295,6 @@ function parse(tokens) {
   return {type:'Program', body};
 }
 
-/* ═══════════════════════════════════════════════════════
-   AST → SVG tree rendering
-═══════════════════════════════════════════════════════ */
 function astToSvg(ast) {
   function exprNode(n) {
     if (!n) return {label:'null', children:[]};
@@ -402,7 +366,6 @@ function astToSvg(ast) {
 
   const root = {label:'Program', children:ast.body.map(fnNode)};
 
-  // ── Geometry pass ──
   const NH=22, GX=10, GY=36, PAD=10, CW=6.4;
   function measureW(n) {
     n.sw = Math.max(60, n.label.length*CW+PAD*2);

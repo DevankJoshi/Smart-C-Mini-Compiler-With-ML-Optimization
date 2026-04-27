@@ -1,20 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   ML MODELS: MULTI-MODEL ENSEMBLE FOR COMPILER OPTIMIZATION
-   
-   Implements 4 different ML models:
-   1. Logistic Regression (baseline, fast)
-   2. Decision Tree (interpretable)
-   3. Random Forest (robust, ensemble)
-   4. Neural Network (complex patterns)
-   
-   Predicts which optimization pass to apply:
-   0 = None (no optimization)
-   1 = Constant Folding
-   2 = Dead Code Elimination
-   3 = Common Subexpression Elimination
-   4 = Loop Invariant Code Motion
-   5 = Loop Unrolling
-═══════════════════════════════════════════════════════ */
+
 
 class LogisticRegressionClassifier {
   constructor(inputSize, numClasses, learningRate = 0.01) {
@@ -80,9 +64,9 @@ class LogisticRegressionClassifier {
 
   static fromJSON(data) {
     const model = new LogisticRegressionClassifier(
-      data.inputSize,
-      data.numClasses,
-      data.learningRate
+      data.inputSize || data.input_size,
+      data.numClasses || data.num_classes,
+      data.learningRate || data.learning_rate
     );
     model.weights = data.weights;
     return model;
@@ -102,6 +86,7 @@ class DecisionTreeClassifier {
   }
 
   _predictSample(sample, node) {
+    if (!node) return 0; 
     if ('class' in node) {
       return node.class;
     }
@@ -113,10 +98,13 @@ class DecisionTreeClassifier {
   }
 
   predictWithConfidence(features) {
+    if (!this.tree) {
+      return { class: 0, confidence: 0.5, modelName: this.modelName };
+    }
     const classIdx = this.predict(features);
     return {
       class: classIdx,
-      confidence: 0.85, // Decision trees don't give probability by default
+      confidence: 0.85, 
       modelName: this.modelName
     };
   }
@@ -140,6 +128,7 @@ class RandomForestClassifier {
   }
 
   predict(features) {
+    if (!this.trees || this.trees.length === 0) return 0;
     const votes = Array(this.numClasses).fill(0);
     for (let tree of this.trees) {
       const pred = tree.predict(features);
@@ -149,6 +138,9 @@ class RandomForestClassifier {
   }
 
   predictWithConfidence(features) {
+    if (!this.trees || this.trees.length === 0) {
+      return { class: 0, confidence: 0.5, modelName: this.modelName };
+    }
     const votes = Array(this.numClasses).fill(0);
     for (let tree of this.trees) {
       const pred = tree.predict(features);
@@ -196,20 +188,18 @@ class NeuralNetworkClassifier {
   }
 
   forward(features) {
-    // Add bias
+    
     const augmented = [...features, 1];
 
-    // Layer 1: input -> hidden
     const hidden1 = [];
     for (let i = 0; i < this.hiddenSize; i++) {
       let sum = 0;
       for (let j = 0; j < this.inputSize + 1; j++) {
         sum += this.W1[j][i] * augmented[j];
       }
-      hidden1.push(Math.max(0, sum)); // ReLU
+      hidden1.push(Math.max(0, sum)); 
     }
 
-    // Layer 2: hidden -> hidden
     const augmented2 = [...hidden1, 1];
     const hidden2 = [];
     for (let i = 0; i < this.hiddenSize; i++) {
@@ -217,10 +207,9 @@ class NeuralNetworkClassifier {
       for (let j = 0; j < this.hiddenSize + 1; j++) {
         sum += this.W2[j][i] * augmented2[j];
       }
-      hidden2.push(Math.max(0, sum)); // ReLU
+      hidden2.push(Math.max(0, sum)); 
     }
 
-    // Layer 3: hidden -> output
     const augmented3 = [...hidden2, 1];
     const output = [];
     for (let i = 0; i < this.numClasses; i++) {
@@ -259,7 +248,6 @@ class NeuralNetworkClassifier {
   }
 }
 
-// Multi-Model Manager
 class MLModelManager {
   constructor() {
     this.models = {};
@@ -278,10 +266,10 @@ class MLModelManager {
 
   normalizeFeatures(features) {
     if (!this.featureStats) return features;
-    
+
     const mean = this.featureStats.mean;
     const std = this.featureStats.std;
-    
+
     return features.map((f, i) => {
       const stdVal = std[i] || 1;
       return (f - mean[i]) / (stdVal + 1e-10);
@@ -294,20 +282,13 @@ class MLModelManager {
     this.bestModel = data.best_model || 'logistic_regression';
     this.classNames = data.class_names || this.classNames;
 
-    // Load Logistic Regression
     if (data.logistic_regression) {
       const lr_data = data.logistic_regression;
       this.models['logistic_regression'] = LogisticRegressionClassifier.fromJSON(lr_data);
     }
 
-    // Load Decision Tree
-    if (data.decision_tree) {
-      const dt = new DecisionTreeClassifier(data.decision_tree.num_classes, data.decision_tree.max_depth);
-      dt.tree = data.decision_tree.tree;
-      this.models['decision_tree'] = dt;
-    }
 
-    // Load Random Forest
+    
     if (data.random_forest) {
       const rf = new RandomForestClassifier(data.random_forest.num_trees, data.random_forest.num_classes);
       if (data.random_forest.trees) {
@@ -320,7 +301,6 @@ class MLModelManager {
       this.models['random_forest'] = rf;
     }
 
-    // Load Neural Network
     if (data.neural_network) {
       const nn = new NeuralNetworkClassifier(
         data.neural_network.input_size,
@@ -358,7 +338,7 @@ class MLModelManager {
   predictWithBestModel(features) {
     const normalized = this.normalizeFeatures(features);
     const model = this.models[this.bestModel];
-    
+
     if (!model) {
       console.warn('Best model not loaded');
       return null;
@@ -400,4 +380,13 @@ if (typeof module !== 'undefined' && module.exports) {
     NeuralNetworkClassifier,
     MLModelManager
   };
+}
+
+if (typeof window !== 'undefined') {
+  window.LogisticRegressionClassifier = LogisticRegressionClassifier;
+  window.DecisionTreeClassifier = DecisionTreeClassifier;
+  window.RandomForestClassifier = RandomForestClassifier;
+  window.NeuralNetworkClassifier = NeuralNetworkClassifier;
+  window.MLModelManager = MLModelManager;
+  console.log('✓ multi_models.js parsed successfully and exported to window');
 }

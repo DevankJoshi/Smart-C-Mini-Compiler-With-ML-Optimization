@@ -1,14 +1,5 @@
-/* ═══════════════════════════════════════════════════════
-   COMPILER INTEGRATION MODULE
-   
-   Connects the ML optimizer to the existing compiler pipeline.
-   Makes ML-driven optimization seamless.
-═══════════════════════════════════════════════════════ */
 
-/**
- * Main ML optimization pipeline
- * Integrates with existing compiler driver
- */
+
 function mlOptimizeCompile(sourceCode, enableML = true, verbose = false) {
   const result = {
     success: false,
@@ -25,26 +16,22 @@ function mlOptimizeCompile(sourceCode, enableML = true, verbose = false) {
   };
 
   try {
-    // Step 1: Lex
+    
     if (verbose) console.log('Step 1: Lexical Analysis');
     const tokens = lex(sourceCode);
 
-    // Step 2: Parse
     if (verbose) console.log('Step 2: Parsing');
     const ast = parse(tokens);
 
-    // Step 3: Semantic Analysis
     if (verbose) console.log('Step 3: Semantic Analysis');
     const sem = semanticAnalysis(ast);
 
-    // Step 4: Generate TAC
     if (verbose) console.log('Step 4: IR Generation');
     const originalTAC = generateIR(ast);
     result.stats.original_tac_size = originalTAC.filter(
       c => c.op !== 'label' && c.op !== 'func'
     ).length;
 
-    // Step 5: ML-Guided Optimization
     if (verbose) console.log('Step 5: ML-Guided Optimization');
     const { optimizedIR, report } = enableML
       ? optimizeTACWithML(originalTAC, true)
@@ -60,12 +47,10 @@ function mlOptimizeCompile(sourceCode, enableML = true, verbose = false) {
     result.stats.ml_prediction = report.ml_prediction;
     result.stats.ml_confidence = report.ml_confidence;
 
-    // Step 6: Convert back to C
     if (verbose) console.log('Step 6: Generating optimized C code');
     const optimizedC = tacToC(optimizedIR);
     result.optimized = optimizedC;
 
-    // Step 7: Validate (simple check)
     if (verbose) console.log('Step 7: Validation');
     result.success = optimizedC && optimizedC.length > 0;
 
@@ -84,10 +69,6 @@ function mlOptimizeCompile(sourceCode, enableML = true, verbose = false) {
   }
 }
 
-/**
- * Apply ML-optimized code back to editor
- * (to be integrated with VS Code extension API)
- */
 function applyOptimizedCode(editorInstance, optimizedCode) {
   if (!editorInstance || !optimizedCode) {
     console.warn('Cannot apply optimized code: missing editor or code');
@@ -95,7 +76,7 @@ function applyOptimizedCode(editorInstance, optimizedCode) {
   }
 
   try {
-    // Replace editor content with optimized code
+    
     editorInstance.setValue(optimizedCode);
     return true;
   } catch (error) {
@@ -104,9 +85,6 @@ function applyOptimizedCode(editorInstance, optimizedCode) {
   }
 }
 
-/**
- * Create detailed optimization report
- */
 function createOptimizationReport(originalCode, optimizationResult) {
   const lines = [];
 
@@ -115,14 +93,12 @@ function createOptimizationReport(originalCode, optimizationResult) {
   lines.push('═══════════════════════════════════════════════════════');
   lines.push('');
 
-  // Stats
   lines.push('STATISTICS:');
   lines.push(`  Original TAC Instructions: ${optimizationResult.stats.original_tac_size}`);
   lines.push(`  Optimized TAC Instructions: ${optimizationResult.stats.optimized_tac_size}`);
   lines.push(`  Reduction: ${optimizationResult.stats.reduction_percent}%`);
   lines.push('');
 
-  // ML Info
   if (optimizationResult.stats.ml_prediction) {
     lines.push('ML OPTIMIZATION:');
     lines.push(`  Predicted: ${optimizationResult.stats.ml_prediction}`);
@@ -132,7 +108,6 @@ function createOptimizationReport(originalCode, optimizationResult) {
     lines.push('');
   }
 
-  // Original code
   lines.push('ORIGINAL CODE:');
   lines.push('-'.repeat(60));
   originalCode
@@ -144,7 +119,6 @@ function createOptimizationReport(originalCode, optimizationResult) {
   }
   lines.push('');
 
-  // Optimized code
   lines.push('OPTIMIZED CODE:');
   lines.push('-'.repeat(60));
   optimizationResult.optimized
@@ -161,7 +135,6 @@ function createOptimizationReport(originalCode, optimizationResult) {
   return lines.join('\n');
 }
 
-// Export
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     mlOptimizeCompile,

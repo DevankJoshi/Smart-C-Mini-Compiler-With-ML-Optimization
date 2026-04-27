@@ -1,19 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   TAC TO C CODE GENERATOR
-   
-   Converts Three-Address Code back to C source code.
-   This is critical for the pipeline:
-   
-   C source → compiler → TAC → optimizer → optimized TAC
-                                                ↓
-                                        TAC → C code
-                                        (this module)
-   
-   Challenges:
-   - TAC is unstructured (uses labels and gotos)
-   - Must reconstruct if/while/for loops
-   - Must handle arrays, functions, temporaries
-═══════════════════════════════════════════════════════ */
+
 
 function tacToC(ir) {
   const gen = new CCodeGenerator(ir);
@@ -24,36 +9,32 @@ class CCodeGenerator {
   constructor(ir) {
     this.ir = ir;
     this.lines = [];
-    this.labelMap = new Map(); // label -> line number
-    this.variableTypes = new Map(); // var name -> type
+    this.labelMap = new Map(); 
+    this.variableTypes = new Map(); 
     this.declaredVars = new Set();
-    this.arrays = new Map(); // array name -> size
+    this.arrays = new Map(); 
   }
 
   generate() {
-    // Phase 1: Analyze IR to extract metadata
+    
     this.analyzeIR();
 
-    // Phase 2: Generate code
     this.generateCode();
 
-    // Phase 3: Format output
     return this.formatOutput();
   }
 
   analyzeIR() {
-    // Build label map
+    
     this.ir.forEach((instr, idx) => {
       if (instr.op === 'label') {
         this.labelMap.set(instr.dest, idx);
       }
 
-      // Infer array declarations
       if (instr.op === 'array_decl') {
         this.arrays.set(instr.dest, parseInt(instr.arg1));
       }
 
-      // Infer variable types (default to int)
       ['dest', 'arg1', 'arg2'].forEach(field => {
         const varName = instr[field];
         if (varName && !this.isLiteral(varName) && !varName.startsWith('L')) {
@@ -75,7 +56,7 @@ class CCodeGenerator {
 
       switch (instr.op) {
         case 'func':
-          // Generate function declaration
+          
           const params = (instr.params || [])
             .map(p => `int ${p.name}`)
             .join(', ');
@@ -85,8 +66,7 @@ class CCodeGenerator {
           break;
 
         case 'label':
-          // Emit label (will be converted to if/while/goto if possible)
-          // For now, just comment it
+
           this.lines.push(`${currentFuncIndent}// label: ${instr.dest}`);
           break;
 
@@ -165,8 +145,7 @@ class CCodeGenerator {
           break;
 
         case 'param':
-          // Parameter passing (for function calls)
-          // In simple case, just skip (handled in call)
+
           break;
 
         case 'call':
@@ -178,31 +157,28 @@ class CCodeGenerator {
           break;
 
         default:
-          // Unknown instruction
+          
           this.lines.push(`${currentFuncIndent}// unknown: ${instr.op}`);
       }
 
       i++;
     }
 
-    // Close last function
     if (inFunction) {
       this.lines.push('}');
     }
   }
 
   formatOutput() {
-    // Generate variable declarations at the top
-    const declarations = [];
     
-    // Emit array declarations
+    const declarations = [];
+
     this.arrays.forEach((size, name) => {
       if (!declarations.find(d => d.includes(`${name}[`))) {
         declarations.push(`int ${name}[${size}];`);
       }
     });
 
-    // Emit regular variable declarations
     const tempVars = Array.from(this.declaredVars)
       .filter(v => v.startsWith('t'))
       .sort();
@@ -211,7 +187,6 @@ class CCodeGenerator {
       declarations.push(`int ${tempVars.join(', ')};`);
     }
 
-    // Combine with body
     const result = [
       '#include <stdio.h>',
       '',
@@ -223,9 +198,6 @@ class CCodeGenerator {
     return this.formatC(result);
   }
 
-  /**
-   * Pretty-print C code
-   */
   formatC(code) {
     let indentLevel = 0;
     const lines = code.split('\n');
@@ -239,16 +211,13 @@ class CCodeGenerator {
         return;
       }
 
-      // Decrease indent for closing braces
       if (trimmed.startsWith('}')) {
         indentLevel = Math.max(0, indentLevel - 1);
       }
 
-      // Add indentation
       const indented = '  '.repeat(indentLevel) + trimmed;
       formatted.push(indented);
 
-      // Increase indent for opening braces
       if (trimmed.endsWith('{')) {
         indentLevel++;
       }
@@ -260,9 +229,9 @@ class CCodeGenerator {
   isLiteral(val) {
     if (!val) return false;
     const str = String(val);
-    // Number literal
+    
     if (/^-?[0-9]+(\.[0-9]+)?$/.test(str)) return true;
-    // String literal
+    
     if (str.startsWith('"') && str.endsWith('"')) return true;
     return false;
   }
@@ -270,19 +239,14 @@ class CCodeGenerator {
   formatValue(val) {
     if (!val) return '0';
     const str = String(val);
-    // Negate unary minus if needed
+    
     if (str === '-') return '-';
     return str;
   }
 }
 
-/**
- * Compare two C code strings semantically
- * (simplified: just check they compute the same values)
- */
 function compareCodeEquivalence(original, optimized) {
-  // This would require executing both and comparing outputs
-  // For now, just a placeholder
+
   return {
     equivalent: true,
     confidence: 0.8,
@@ -290,7 +254,6 @@ function compareCodeEquivalence(original, optimized) {
   };
 }
 
-// Export
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { tacToC, CCodeGenerator, compareCodeEquivalence };
 }

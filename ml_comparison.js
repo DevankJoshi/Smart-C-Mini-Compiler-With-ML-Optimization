@@ -1,17 +1,5 @@
-/* ═══════════════════════════════════════════════════════
-   ML MODEL COMPARISON PANEL
-   
-   Displays all 4 models with:
-   - Individual predictions
-   - Confidence scores
-   - Model accuracy metrics
-   - Optimization results comparison
-   - Feature analysis
-═══════════════════════════════════════════════════════ */
 
-/**
- * Render comprehensive ML model comparison
- */
+
 function renderMLComparison(report) {
   const container = document.getElementById('out-8');
   
@@ -20,9 +8,17 @@ function renderMLComparison(report) {
     return;
   }
 
+  const MODEL_DISPLAY_NAMES = {
+    'logistic_regression': 'Logistic Regression',
+    'decision_tree':       'Decision Tree',
+    'random_forest':       'Random Forest',
+    'neural_network':      'Neural Network'
+  };
+
   const comparison = report.ml_report;
-  const bestModel = comparison.best[0];
-  const allPredictions = comparison.all;
+  const bestModelKey = comparison.best[0];           
+  const bestPred     = comparison.best[1];           
+  const bestModelName = MODEL_DISPLAY_NAMES[bestModelKey] || bestModelKey;
   const comparisonData = comparison.comparison || [];
 
   let html = `
@@ -32,10 +28,9 @@ function renderMLComparison(report) {
       <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:12px; border-radius:8px; color:white;">
         <div style="font-weight:bold; margin-bottom:8px;">🏆 BEST MODEL SELECTED</div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px;">
-          <div><strong>Model:</strong> ${bestModel}</div>
-          <div><strong>Prediction:</strong> ${comparison.best[1][0].className}</div>
-          <div><strong>Confidence:</strong> ${(comparison.best[1][0].confidence * 100).toFixed(1)}%</div>
-          <div><strong>Model Accuracy:</strong> ${(comparison.best[1][0].modelAccuracy * 100).toFixed(2)}%</div>
+          <div><strong>Model:</strong> ${bestModelName}</div>
+          <div><strong>Prediction:</strong> ${bestPred.className}</div>
+          <div><strong>Confidence:</strong> ${(bestPred.confidence * 100).toFixed(1)}%</div>
         </div>
       </div>
 
@@ -47,13 +42,13 @@ function renderMLComparison(report) {
             <tr style="background:var(--gray-bg); border-bottom:1px solid var(--gray-bd);">
               <th style="padding:8px; text-align:left; border-right:1px solid var(--gray-bd);">Model</th>
               <th style="padding:8px; text-align:left; border-right:1px solid var(--gray-bd);">Prediction</th>
-              <th style="padding:8px; text-align:left; border-right:1px solid var(--gray-bd);">Confidence</th>
-              <th style="padding:8px; text-align:left;">Model Accuracy</th>
+              <th style="padding:8px; text-align:left;">Confidence</th>
             </tr>
           </thead>
           <tbody>
             ${comparisonData.map((item, idx) => {
-              const isHighlight = item.model === bestModel;
+              const isHighlight = item.model === bestModelKey;
+              const displayName = MODEL_DISPLAY_NAMES[item.model] || item.model;
               const bgColor = isHighlight ? 'rgba(102, 126, 234, 0.1)' : (idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)');
               const fontWeight = isHighlight ? 'bold' : 'normal';
               
@@ -64,25 +59,17 @@ function renderMLComparison(report) {
               return `
                 <tr style="background:${bgColor}; border-bottom:1px solid var(--gray-bd);">
                   <td style="padding:8px; border-right:1px solid var(--gray-bd); font-weight:${fontWeight};">
-                    ${isHighlight ? '⭐ ' : ''}${item.model}
+                    ${isHighlight ? '⭐ ' : ''}${displayName}
                   </td>
                   <td style="padding:8px; border-right:1px solid var(--gray-bd); color:var(--text1);">
                     ${item.prediction}
                   </td>
-                  <td style="padding:8px; border-right:1px solid var(--gray-bd);">
+                  <td style="padding:8px;">
                     <div style="display:flex; align-items:center; gap:5px;">
                       <div style="width:60px; height:6px; background:var(--gray-bg); border-radius:3px; overflow:hidden;">
                         <div style="width:${confidenceVal * 100}%; height:100%; background:linear-gradient(90deg, #667eea, #764ba2);"></div>
                       </div>
                       <span>${item.confidence}</span>
-                    </div>
-                  </td>
-                  <td style="padding:8px;">
-                    <div style="display:flex; align-items:center; gap:5px;">
-                      <div style="width:60px; height:6px; background:var(--gray-bg); border-radius:3px; overflow:hidden;">
-                        <div style="width:${accuracyVal * 100}%; height:100%; background:#4CAF50;"></div>
-                      </div>
-                      <span>${item.modelAccuracy}</span>
                     </div>
                   </td>
                 </tr>
@@ -96,7 +83,7 @@ function renderMLComparison(report) {
       <div style="border-left:3px solid var(--green-bd); padding-left:10px;">
         <div style="font-weight:bold; margin-bottom:8px; color:var(--text1);">🔍 MODEL DETAILS</div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-          ${comparisonData.map(item => createModelCard(item, bestModel === item.model)).join('')}
+          ${comparisonData.map(item => createModelCard(item, bestModelKey === item.model, MODEL_DISPLAY_NAMES)).join('')}
         </div>
       </div>
 
@@ -117,22 +104,19 @@ function renderMLComparison(report) {
   container.innerHTML = html;
 }
 
-/**
- * Create individual model card
- */
-function createModelCard(modelData, isBest) {
+function createModelCard(modelData, isBest, MODEL_DISPLAY_NAMES) {
+  const displayName = (MODEL_DISPLAY_NAMES || {})[modelData.model] || modelData.model;
   const colors = {
-    'Logistic Regression': { bg: '#667eea', light: 'rgba(102, 126, 234, 0.1)' },
-    'Decision Tree': { bg: '#f093fb', light: 'rgba(240, 147, 251, 0.1)' },
-    'Random Forest': { bg: '#4CAF50', light: 'rgba(76, 175, 80, 0.1)' },
-    'Neural Network': { bg: '#FF9800', light: 'rgba(255, 152, 0, 0.1)' }
+    'logistic_regression': { bg: '#667eea', light: 'rgba(102, 126, 234, 0.1)' },
+    'decision_tree':       { bg: '#f093fb', light: 'rgba(240, 147, 251, 0.1)' },
+    'random_forest':       { bg: '#4CAF50', light: 'rgba(76, 175, 80, 0.1)'   },
+    'neural_network':      { bg: '#FF9800', light: 'rgba(255, 152, 0, 0.1)'   }
   };
   
   const color = colors[modelData.model] || { bg: '#999', light: 'rgba(0,0,0,0.1)' };
   const border = isBest ? `3px solid ${color.bg}` : '1px solid var(--gray-bd)';
   const shadow = isBest ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.05)';
-  
-  // Parse string percentages from multi_models.js
+
   const confidenceVal = parseFloat(modelData.confidence) / 100;
   const accuracyVal = parseFloat(modelData.modelAccuracy) / 100;
   const colorCode = accuracyVal > 0.85 ? '#4CAF50' : accuracyVal > 0.5 ? '#FF9800' : '#f44336';
@@ -153,16 +137,12 @@ function createModelCard(modelData, isBest) {
       <div style="font-size:12px; color:var(--text2); display:flex; flex-direction:column; gap:6px;">
         <div><strong>Prediction:</strong> <span style="color:var(--text1);">${modelData.prediction}</span></div>
         <div><strong>Confidence:</strong> <span style="color:var(--text1);">${modelData.confidence}</span></div>
-        <div><strong>Accuracy:</strong> <span style="color:${colorCode}; font-weight:bold;">${modelData.modelAccuracy}</span></div>
       </div>
       ${isBest ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid ${color.bg}; color:${color.bg}; font-size:11px; font-weight:bold;">⭐ SELECTED</div>` : ''}
     </div>
   `;
 }
 
-/**
- * Render consensus analysis
- */
 function renderConsensusAnalysis(comparisonData) {
   const predictions = comparisonData.map(c => c.prediction);
   const uniquePredictions = [...new Set(predictions)];
@@ -213,24 +193,22 @@ function renderConsensusAnalysis(comparisonData) {
   return html;
 }
 
-/**
- * Render feature analysis
- */
 function renderFeatureAnalysis(features) {
-  const featureNames = [
-    'Instructions',
-    'Temporaries',
-    'Arithmetic Ops',
-    'Memory Access',
-    'Branches',
-    'Loops',
-    'Nesting Depth',
-    'Repeated Expr',
-    'Constant Expr',
-    'Dead Assigns'
-  ];
+  
+  let pairs;
+  if (Array.isArray(features)) {
+    const featureNames = [
+      'Instructions', 'Temporaries', 'Arithmetic Ops', 'Memory Access',
+      'Branches', 'Loops', 'Nesting Depth', 'Repeated Expr', 'Constant Expr', 'Dead Assigns'
+    ];
+    pairs = features.map((v, i) => [featureNames[i] || `Feature ${i}`, v]);
+  } else {
+    pairs = Object.entries(features).map(([k, v]) => [
+      k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), v
+    ]);
+  }
 
-  const maxFeature = Math.max(...features);
+  const maxVal = Math.max(...pairs.map(p => p[1]), 1);
   
   let html = `
     <div style="border-left:3px solid var(--coral-bd); padding-left:10px;">
@@ -238,10 +216,8 @@ function renderFeatureAnalysis(features) {
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; font-size:12px;">
   `;
 
-  features.forEach((value, idx) => {
-    const percentage = (value / maxFeature) * 100;
-    const name = featureNames[idx] || `Feature ${idx}`;
-    
+  pairs.forEach(([name, value]) => {
+    const percentage = (value / maxVal) * 100;
     html += `
       <div style="background:var(--gray-bg); padding:8px; border-radius:6px; border-left:3px solid #667eea;">
         <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">${name}</div>
@@ -257,9 +233,6 @@ function renderFeatureAnalysis(features) {
   return html;
 }
 
-/**
- * Render optimization comparison
- */
 function renderOptimizationComparison(report) {
   if (!report.ml_report) return '';
 
@@ -273,8 +246,7 @@ function renderOptimizationComparison(report) {
   ];
 
   const comparison = report.ml_report.comparison;
-  
-  // Create a mapping of predictions to optimization details
+
   const optDetails = {
     'Constant Folding': { emoji: '🔢', desc: 'Pre-compute constant expressions', benefit: 'Speed: Reduces computation at runtime' },
     'Dead Code Elimination': { emoji: '🗑️', desc: 'Remove unused variables & code', benefit: 'Size: Reduces binary size' },
@@ -290,8 +262,16 @@ function renderOptimizationComparison(report) {
       <div style="display:grid; gap:8px;">
   `;
 
+  const MODEL_DISPLAY_NAMES_OPT = {
+    'logistic_regression': 'Logistic Regression',
+    'decision_tree':       'Decision Tree',
+    'random_forest':       'Random Forest',
+    'neural_network':      'Neural Network'
+  };
+
   comparison.forEach(item => {
     const details = optDetails[item.prediction] || { emoji: '❓', desc: item.prediction, benefit: 'Optimization' };
+    const displayName = MODEL_DISPLAY_NAMES_OPT[item.model] || item.model;
     
     html += `
       <div style="
@@ -306,7 +286,7 @@ function renderOptimizationComparison(report) {
       ">
         <div style="font-size:24px; line-height:1;">${details.emoji}</div>
         <div style="font-size:12px;">
-          <div style="font-weight:bold; color:var(--text1); margin-bottom:2px;">${item.model}</div>
+          <div style="font-weight:bold; color:var(--text1); margin-bottom:2px;">${displayName}</div>
           <div style="color:var(--text2);">Predicts: <strong>${item.prediction}</strong></div>
           <div style="color:var(--text3); font-size:11px; margin-top:4px;">${details.desc}</div>
           <div style="color:var(--text3); font-size:11px; margin-top:2px; font-style:italic;">${details.benefit}</div>
@@ -323,17 +303,3 @@ function renderOptimizationComparison(report) {
   return html;
 }
 
-/**
- * Hook into compile process to display ML comparison
- */
-const originalCompile = compile;
-compile = function() {
-  originalCompile.call(this);
-  
-  // After compilation, display ML comparison if available
-  if (window.lastMLReport) {
-    setTimeout(() => {
-      renderMLComparison(window.lastMLReport);
-    }, 100);
-  }
-};

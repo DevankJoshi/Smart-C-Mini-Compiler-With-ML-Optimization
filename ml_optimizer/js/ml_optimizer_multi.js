@@ -1,39 +1,29 @@
-/* ═══════════════════════════════════════════════════════
-   ML-GUIDED OPTIMIZER WITH MULTI-MODEL SUPPORT
-   
-   Integrates 4 different ML models with comparison visualization.
-   
-   Models:
-   1. Logistic Regression
-   2. Decision Tree
-   3. Random Forest
-   4. Neural Network
-   
-   Strategy:
-   1. Extract features from TAC
-   2. Run all 4 models
-   3. Compare predictions and accuracies
-   4. Use best performing model or ensemble
-   5. Apply predicted optimization
-═══════════════════════════════════════════════════════ */
+
 
 let mlModelManager = null;
 
-/**
- * Initialize ML models from trained data
- */
 async function initializeMLModels() {
   try {
-    // Try to load all trained models
-    const response = await fetch('ml_optimizer/js/trained_models.json');
-    if (response.ok) {
-      const data = await response.json();
+    let data;
+    
+    if (typeof TRAINED_MODELS_JSON !== 'undefined') {
+      data = TRAINED_MODELS_JSON;
+    } else {
+      
+      const response = await fetch('ml_optimizer/js/trained_models.json');
+      if (response.ok) {
+        data = await response.json();
+      }
+    }
+
+    if (data) {
       mlModelManager = new MLModelManager();
       mlModelManager.loadFromJSON(data);
       console.log('✓ Loaded multi-model ML system');
       return true;
     }
   } catch (e) {
+    console.error('Multi-model initialization failed:', e);
     console.log('Multi-model system not available, using single model fallback');
   }
   
@@ -49,9 +39,6 @@ const OPTIMIZATION_NAMES = [
   'Loop Unrolling'
 ];
 
-/**
- * ML-guided TAC optimizer with multi-model support
- */
 function optimizeTACWithML(ir, useML = true) {
   let opt = cloneIR(ir);
   const report = {
@@ -66,28 +53,23 @@ function optimizeTACWithML(ir, useML = true) {
     useMultiModel: false
   };
 
-  // Extract features
   const { raw: rawFeatures, vector: featureVector } = extractFeatures(ir);
   report.ml_features = rawFeatures;
 
-  // ML-guided optimization with multi-model support
   if (useML && mlModelManager) {
     try {
       report.useMultiModel = true;
-      
-      // Get all model predictions
+
       const comparison = mlModelManager.getModelComparison(featureVector);
       report.ml_report = comparison;
-      
-      // Use best performing model
+
       const [bestModelName, bestPred] = comparison.best;
       const optClass = bestPred[0].class;
       
       report.ml_prediction = bestPred[0].className;
       report.ml_confidence = bestPred[0].confidence;
       report.ml_best_model = bestModelName;
-      
-      // Log all predictions
+
       comparison.comparison.forEach(comp => {
         report.passes.push({
           round: 0,
@@ -96,15 +78,14 @@ function optimizeTACWithML(ir, useML = true) {
         });
       });
 
-      // Apply predicted optimization once
       applyOptimization(opt, optClass, report);
       
     } catch (e) {
       console.warn('Multi-model prediction failed:', e.message);
-      // Fall back to single model or traditional optimization
+      
     }
   } else if (useML) {
-    // Fallback: use single model if multi-model not available
+    
     try {
       const model = LogisticRegressionClassifier.fromJSON(DEFAULT_MODEL_WEIGHTS);
       const normalizedFeatures = normalizeFeatures(featureVector);
@@ -127,7 +108,6 @@ function optimizeTACWithML(ir, useML = true) {
     }
   }
 
-  // Always apply fundamental passes (in order)
   const MAX_ROUNDS = 5;
   for (let round = 1; round <= MAX_ROUNDS; round++) {
     let anyChange = false;
@@ -158,16 +138,12 @@ function optimizeTACWithML(ir, useML = true) {
   }
 
   report.optimized_count = opt.filter(c => c.op !== 'label' && c.op !== 'func').length;
-  
-  // Store report globally for display panel
+
   window.lastMLReport = report;
   
   return { optimizedIR: opt, report };
 }
 
-/**
- * Apply specified optimization
- */
 function applyOptimization(ir, optClass, report) {
   if (optClass === 1) {
     const res = passConstantFolding(ir);
@@ -204,9 +180,6 @@ function applyOptimization(ir, optClass, report) {
   }
 }
 
-/**
- * Normalize features using statistics
- */
 function normalizeFeatures(featureVector) {
   const FEATURE_STATS = {
     mean: [50, 15, 20, 10, 12, 3, 2, 5, 4, 8],
@@ -219,7 +192,6 @@ function normalizeFeatures(featureVector) {
   });
 }
 
-// Default pre-trained model weights (for fallback)
 const DEFAULT_MODEL_WEIGHTS = {
   inputSize: 10,
   numClasses: 6,
@@ -236,9 +208,6 @@ const DEFAULT_MODEL_WEIGHTS = {
   epoch_history: []
 };
 
-/**
- * Renders comprehensive ML analysis with multi-model comparison
- */
 function renderMLPrediction(report) {
   if (!report.ml_prediction) return '';
 
@@ -258,7 +227,6 @@ function renderMLPrediction(report) {
   </div>
 `;
 
-  // Show model accuracy if using multi-model
   if (report.useMultiModel && report.ml_best_model) {
     html += `
   <div style="font-size:10px;color:var(--text2);margin-bottom:8px">
@@ -267,7 +235,6 @@ function renderMLPrediction(report) {
   </div>`;
   }
 
-  // Model comparison table if available
   if (report.ml_report && report.ml_report.comparison.length > 0) {
     html += `
   <div style="margin-top:8px;padding-top:8px;border-top:1px solid ${confColor}33;font-size:10px">
@@ -293,7 +260,6 @@ function renderMLPrediction(report) {
     html += `</table></div>`;
   }
 
-  // Feature analysis
   if (report.ml_features) {
     const featureRows = Object.entries(report.ml_features).map(([key, val]) => 
       `<tr>

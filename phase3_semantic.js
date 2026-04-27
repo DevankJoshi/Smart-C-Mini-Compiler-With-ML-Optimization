@@ -1,24 +1,8 @@
-/* ═══════════════════════════════════════════════════════
-   PHASE 3 — SEMANTIC ANALYSIS
-   • Builds a global function symbol table (first pass)
-   • Checks each function body for:
-       - undeclared / redeclared variables
-       - undeclared function calls
-       - argument count mismatches
-       - strings used in arithmetic (warning)
 
-   NEW in this version:
-   ● ForStmt checking (init, cond, update, body)
-   ● BreakStmt / ContinueStmt — warns if outside a loop
-   ● ArrayAssignStmt checking
-   ● IndexExpr, PostfixExpr, PrefixExpr, UnaryExpr, AssignExpr
-   ● float / char type awareness
-═══════════════════════════════════════════════════════ */
 function semanticAnalysis(ast) {
   const funcTable = {}, allSymbols = {}, errors = [], warnings = [];
-  let loopDepth = 0; // track if we're inside a loop
+  let loopDepth = 0; 
 
-  // First pass: register all function signatures
   ast.body.forEach(fn => {
     if (funcTable[fn.name]) errors.push(`Function '${fn.name}' declared more than once`);
     funcTable[fn.name] = {rtype:fn.rtype, params:fn.params};
@@ -28,7 +12,6 @@ function semanticAnalysis(ast) {
     };
   });
 
-  /* ──── Expression type checker ──── */
   function checkExpr(e, scope) {
     if (!e) return 'void';
 
@@ -44,7 +27,7 @@ function semanticAnalysis(ast) {
         return scope[e.name] || 'unknown';
 
       case 'UnaryExpr':
-        return checkExpr(e.operand, scope); // propagate type
+        return checkExpr(e.operand, scope); 
 
       case 'PrefixExpr':
       case 'PostfixExpr':
@@ -57,11 +40,11 @@ function semanticAnalysis(ast) {
         return scope[e.name] || 'int';
 
       case 'IndexExpr': {
-        // arr[i]
+        
         const arrType = scope[e.name];
         if (!arrType) errors.push(`Array '${e.name}' used before declaration`);
         checkExpr(e.index, scope);
-        // base type is the element type (strip '[]' suffix if present)
+        
         return arrType ? arrType.replace('[]','') : 'unknown';
       }
 
@@ -87,7 +70,6 @@ function semanticAnalysis(ast) {
     }
   }
 
-  /* ──── Statement checker ──── */
   function checkStmt(s, scope) {
     if (!s) return;
 
@@ -95,7 +77,7 @@ function semanticAnalysis(ast) {
       case 'VarDecl':
         if (scope.hasOwnProperty(s.name))
           errors.push(`Variable '${s.name}' redeclared in same scope`);
-        // Store type; mark arrays with '[]' suffix
+        
         scope[s.name] = s.arrSize ? s.dtype+'[]' : s.dtype;
         allSymbols[s.name] = {kind: s.arrSize ? 'array' : 'variable',
                               sig: s.dtype + (s.arrSize ? '['+s.arrSize+']' : '')};
@@ -135,7 +117,7 @@ function semanticAnalysis(ast) {
         break;
 
       case 'ForStmt':
-        // Init might declare variables — use a child scope
+        
         const forScope = {...scope};
         if (s.init) checkStmt(s.init, forScope);
         if (s.cond) checkExpr(s.cond, forScope);
@@ -162,7 +144,7 @@ function semanticAnalysis(ast) {
 
       case 'SwitchStmt':
         checkExpr(s.expr, scope);
-        loopDepth++; // break is valid inside switch
+        loopDepth++; 
         s.cases.forEach(c => {
           if (c.value) checkExpr(c.value, scope);
           c.body.forEach(x => checkStmt(x, {...scope}));
